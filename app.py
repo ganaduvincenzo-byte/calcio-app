@@ -45,8 +45,8 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale con Risultato Esatto, Gol/No Gol, Gol 1° Tempo,"
-    " Rigori e marcatori."
+    "Piattaforma professionale con Risultato Esatto, Over 1.5/2.5, Gol/No Gol,"
+    " Gol 1° Tempo, Rigori e marcatori."
 )
 st.markdown("---")
 
@@ -156,7 +156,8 @@ with tab1:
                   else media_ospiti
               )
 
-              prob_1, prob_x, prob_2, prob_over = 0, 0, 0, 0
+              prob_1, prob_x, prob_2 = 0, 0, 0
+              prob_over15, prob_over25 = 0, 0
               prob_gol = 0
               max_p_risultato = -1
               risultato_esatto = "1-1"
@@ -175,12 +176,18 @@ with tab1:
                     prob_x += p
                   else:
                     prob_2 += p
-                  if (g_casa + g_ospite) > 2.5:
-                    prob_over += p
+
+                  tot_gol = g_casa + g_ospite
+                  if tot_gol > 1.5:
+                    prob_over15 += p
+                  if tot_gol > 2.5:
+                    prob_over25 += p
+
                   if g_casa > 0 and g_ospite > 0:
                     prob_gol += p
 
-              prob_under = 1.0 - prob_over
+              prob_under15 = 1.0 - prob_over15
+              prob_under25 = 1.0 - prob_over25
               prob_nogol = 1.0 - prob_gol
 
               xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
@@ -214,8 +221,10 @@ with tab1:
                   {"mercato": f"1X2: Casa ({casa})", "prob": prob_1},
                   {"mercato": f"1X2: X (Pareggio)", "prob": prob_x},
                   {"mercato": f"1X2: Ospite ({ospite})", "prob": prob_2},
-                  {"mercato": "Over 2.5", "prob": prob_over},
-                  {"mercato": "Under 2.5", "prob": prob_under},
+                  {"mercato": "Over 1.5", "prob": prob_over15},
+                  {"mercato": "Under 1.5", "prob": prob_under15},
+                  {"mercato": "Over 2.5", "prob": prob_over25},
+                  {"mercato": "Under 2.5", "prob": prob_under25},
                   {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
                   {"mercato": "No Gol", "prob": prob_nogol},
                   {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
@@ -233,7 +242,8 @@ with tab1:
                   "1 (%)": f"{prob_1 * 100:.1f}%",
                   "X (%)": f"{prob_x * 100:.1f}%",
                   "2 (%)": f"{prob_2 * 100:.1f}%",
-                  "Over 2.5 (%)": f"{prob_over * 100:.1f}%",
+                  "Over 1.5 (%)": f"{prob_over15 * 100:.1f}%",
+                  "Over 2.5 (%)": f"{prob_over25 * 100:.1f}%",
                   "Gol (%)": f"{prob_gol * 100:.1f}%",
                   "No Gol (%)": f"{prob_nogol * 100:.1f}%",
                   "Gol 1°T (%)": f"{prob_gol_1t * 100:.1f}%",
@@ -324,12 +334,13 @@ with tab2:
       " tutto):",
       options=[
           "1X2",
+          "Over/Under 1.5",
           "Over/Under 2.5",
           "Gol / No Gol",
           "Gol 1° Tempo",
           "Rigore",
       ],
-      default=["1X2", "Over/Under 2.5", "Gol / No Gol"],
+      default=["1X2", "Over/Under 1.5", "Over/Under 2.5", "Gol / No Gol"],
   )
 
   num_eventi = st.slider("Numero di eventi in schedina:", 1, 15, 4)
@@ -360,6 +371,10 @@ with tab2:
               Includi = True
             else:
               if "1X2" in opzioni_mercato and "1X2:" in nome_m:
+                Includi = True
+              if "Over/Under 1.5" in opzioni_mercato and (
+                  "Over 1.5" in nome_m or "Under 1.5" in nome_m
+              ):
                 Includi = True
               if "Over/Under 2.5" in opzioni_mercato and (
                   "Over 2.5" in nome_m or "Under 2.5" in nome_m
@@ -444,5 +459,5 @@ with tab3:
       "Questa applicazione utilizza modelli statistici avanzati basati sulla"
       " **Distribuzione di Poisson** per stimare il Risultato Esatto, i gol"
       " attesi (xG), i corner, le ammonizioni, i marcatori probabili, il Gol"
-      " 1° Tempo e la stima del **Rigore Sì** per ogni match."
+      " 1° Tempo, gli Over/Under e la stima del **Rigore Sì** per ogni match."
   )
