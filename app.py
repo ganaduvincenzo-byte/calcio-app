@@ -45,7 +45,7 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale di predictive analytics con Gol/No Gol,"
+    "Piattaforma professionale con Gol/No Gol, Gol 1° Tempo, Rigori,"
     " marcatori e cartellini."
 )
 st.markdown("---")
@@ -171,14 +171,18 @@ with tab1:
               prob_under = 1.0 - prob_over
               prob_nogol = 1.0 - prob_gol
 
+              # Calcolo Gol 1° Tempo (basato sul 42% dei gol totali attesi nel primo tempo)
               xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
-              prob_gol_1t = 1 - (
-                  poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0)
-              )
+              prob_gol_1t = 1 - (poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0))
 
+              # Stima Rigore Sì / No basata su xG e pericolosità offensiva
+              # (in media circa il 28-35% delle partite in Europa ha almeno un rigore)
               stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
               diff_forza = abs(xg_c - xg_o)
               stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
+              prob_rigore_si = min(
+                  0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05)
+              )
 
               marcatore_casa = (
                   f"Top Attaccante ({casa})"
@@ -199,11 +203,13 @@ with tab1:
               mercati_disponibili = [
                   {"mercato": f"Casa ({casa})", "prob": prob_1},
                   {"mercato": f"Ospite ({ospite})", "prob": prob_2},
-                  {"mercato": "Under 2.5", "prob": prob_under},
                   {"mercato": "Over 2.5", "prob": prob_over},
                   {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
-                  {"mercato": "No Gol", "prob": prob_nogol},
-                  {"mercato": "Gol 1°T", "prob": prob_gol_1t},
+                  {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
+                  {
+                      "mercato": "Rigore Sì",
+                      "prob": prob_rigore_si,
+                  },
               ]
               miglior_scelta = max(
                   mercati_disponibili, key=lambda x: x["prob"]
@@ -219,6 +225,8 @@ with tab1:
                   "Over 2.5 (%)": f"{prob_over * 100:.1f}%",
                   "Gol (%)": f"{prob_gol * 100:.1f}%",
                   "No Gol (%)": f"{prob_nogol * 100:.1f}%",
+                  "Gol 1°T (%)": f"{prob_gol_1t * 100:.1f}%",
+                  "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
                   "Corner": stimacorner,
                   "Cartellini": stima_cartellini,
                   "🔍 Marcatore Probabile": (
@@ -342,6 +350,6 @@ with tab3:
   st.write(
       "Questa applicazione utilizza modelli statistici avanzati basati sulla"
       " **Distribuzione di Poisson** per stimare i gol attesi (xG), i corner,"
-      " le ammonizioni, i marcatori probabili e le percentuali di **Gol / No"
-      " Gol** per ogni match."
+      " le ammonizioni, i marcatori probabili, il Gol 1° Tempo e la stima del"
+      " **Rigore Sì** per ogni match."
   )
