@@ -26,13 +26,6 @@ st.markdown(
         background-color: #1abc9c !important;
         color: white !important;
     }
-    .metric-card {
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        border-left: 5px solid #1abc9c;
-    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -52,8 +45,8 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale di predictive analytics e generazione"
-    " schedine."
+    "Piattaforma professionale di predictive analytics con Gol/No Gol,"
+    " marcatori e cartellini."
 )
 st.markdown("---")
 
@@ -160,6 +153,7 @@ with tab1:
               )
 
               prob_1, prob_x, prob_2, prob_over = 0, 0, 0, 0
+              prob_gol = 0
               for g_casa in range(6):
                 for g_ospite in range(6):
                   p = poisson(xg_c, g_casa) * poisson(xg_o, g_ospite)
@@ -171,8 +165,12 @@ with tab1:
                     prob_2 += p
                   if (g_casa + g_ospite) > 2.5:
                     prob_over += p
+                  if g_casa > 0 and g_ospite > 0:
+                    prob_gol += p
 
               prob_under = 1.0 - prob_over
+              prob_nogol = 1.0 - prob_gol
+
               xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
               prob_gol_1t = 1 - (
                   poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0)
@@ -182,7 +180,6 @@ with tab1:
               diff_forza = abs(xg_c - xg_o)
               stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
 
-              # Stima avanzata marcatori e ammoniti basata su xG e intensità
               marcatore_casa = (
                   f"Top Attaccante ({casa})"
                   if xg_c > 1.3
@@ -204,6 +201,8 @@ with tab1:
                   {"mercato": f"Ospite ({ospite})", "prob": prob_2},
                   {"mercato": "Under 2.5", "prob": prob_under},
                   {"mercato": "Over 2.5", "prob": prob_over},
+                  {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
+                  {"mercato": "No Gol", "prob": prob_nogol},
                   {"mercato": "Gol 1°T", "prob": prob_gol_1t},
               ]
               miglior_scelta = max(
@@ -218,6 +217,8 @@ with tab1:
                   "X (%)": f"{prob_x * 100:.1f}%",
                   "2 (%)": f"{prob_2 * 100:.1f}%",
                   "Over 2.5 (%)": f"{prob_over * 100:.1f}%",
+                  "Gol (%)": f"{prob_gol * 100:.1f}%",
+                  "No Gol (%)": f"{prob_nogol * 100:.1f}%",
                   "Corner": stimacorner,
                   "Cartellini": stima_cartellini,
                   "🔍 Marcatore Probabile": (
@@ -254,7 +255,6 @@ with tab1:
       except Exception as e:
         st.error(f"⚠️ Errore imprevisto: {e}")
 
-  # Visualizzazione dei risultati in tabella se presenti
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
     display_cols = [
@@ -262,7 +262,7 @@ with tab1:
         for c in df_report.columns
         if not c.startswith("_") and c not in ["Campionato", "Codice"]
     ]
-    st.markdown("### 📋 Tabella Dettagliata & Insights Giocatori")
+    st.markdown("### 📋 Tabella Dettagliata & Statistiche Avanzate")
     st.dataframe(df_report[display_cols], use_container_width=True)
 
 with tab2:
@@ -342,11 +342,6 @@ with tab3:
   st.write(
       "Questa applicazione utilizza modelli statistici avanzati basati sulla"
       " **Distribuzione di Poisson** per stimare i gol attesi (xG), i corner,"
-      " le ammonizioni e i marcatori probabili per ogni match dei principali"
-      " campionati europei."
-  )
-  st.info(
-      "💡 **Consiglio:** Puoi aprire questo link direttamente dal browser del"
-      " tuo smartphone e aggiungerlo alla schermata Home come una vera e"
-      " propria app!"
+      " le ammonizioni, i marcatori probabili e le percentuali di **Gol / No"
+      " Gol** per ogni match."
   )
