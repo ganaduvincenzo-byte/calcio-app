@@ -45,8 +45,8 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale con Gol/No Gol, Gol 1° Tempo, Rigori,"
-    " marcatori e cartellini."
+    "Piattaforma professionale con indicatori di stato, Gol/No Gol, Gol 1°"
+    " Tempo, Rigori e marcatori."
 )
 st.markdown("---")
 
@@ -54,6 +54,9 @@ if "archivio_partite_globali" not in st.session_state:
   st.session_state.archivio_partite_globali = []
 if "ultimo_report" not in st.session_state:
   st.session_state.ultimo_report = []
+# Memorizza i codici dei campionati analizzati con successo
+if "campionati_analizzati" not in st.session_state:
+  st.session_state.campionati_analizzati = set()
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
@@ -65,9 +68,12 @@ with tab1:
 
   col1, col2 = st.columns([3, 1])
   with col1:
-    camp_options = [
-        (code, f"{c['bandiera']} {c['nome']}") for code, c in campionati.items()
-    ]
+    # Aggiunge un visto ✔️ nel menu a tendina se il campionato è già stato analizzato
+    camp_options = []
+    for code, c in campionati.items():
+      prefix = "✔️ " if code in st.session_state.campionati_analizzati else ""
+      camp_options.append((code, f"{prefix}{c['bandiera']} {c['nome']}"))
+
     league_code = st.selectbox(
         "Campionato:",
         options=[opt[0] for opt in camp_options],
@@ -171,12 +177,9 @@ with tab1:
               prob_under = 1.0 - prob_over
               prob_nogol = 1.0 - prob_gol
 
-              # Calcolo Gol 1° Tempo (basato sul 42% dei gol totali attesi nel primo tempo)
               xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
               prob_gol_1t = 1 - (poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0))
 
-              # Stima Rigore Sì / No basata su xG e pericolosità offensiva
-              # (in media circa il 28-35% delle partite in Europa ha almeno un rigore)
               stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
               diff_forza = abs(xg_c - xg_o)
               stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
@@ -251,11 +254,15 @@ with tab1:
                 st.session_state.archivio_partite_globali.remove(esistente)
               st.session_state.archivio_partite_globali.append(diz_partita)
 
+            # Segna il campionato come analizzato
+            st.session_state.campionati_analizzati.add(league_code)
             st.session_state.ultimo_report = report_giornata
             st.success(
                 f"✅ Analisi completata per {selezionato['bandiera']}"
                 f" {selezionato['nome']} (Turno {prossima_giornata})!"
             )
+            # Ricarica per aggiornare subito il menu a tendina col visto
+            st.rerun()
           else:
             st.warning("⚠️ Nessuna partita futura trovata.")
         else:
