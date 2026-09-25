@@ -47,7 +47,8 @@ campionati = {
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto,"
-    " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori e marcatori reali."
+    " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner, Cartellini e marcatori"
+    " reali."
 )
 st.markdown("---")
 
@@ -151,7 +152,7 @@ with tab1:
       except Exception:
         pass
 
-      # 3. Caricamento stagioni passate per lo storico (fino a 5 anni fa)
+      # 3. Caricamento stagioni passate per lo storico
       if num_stagioni > 1:
         anni_passati = [anno_corrente - i for i in range(1, num_stagioni)]
         for anno_p in anni_passati:
@@ -220,7 +221,7 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          # Calcolo xG con Bayesian / Laplace Smoothing per evitare distorsioni estreme
+          # Calcolo xG con Bayesian / Laplace Smoothing
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -233,7 +234,6 @@ with tab1:
           ]
           if len(valid_home_goals) > 0:
             xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
-            # Smorzamento statistico verso la media del torneo per evitare valori assoluti sballati
             xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
                 len(valid_home_goals) + 3
             )
@@ -300,7 +300,18 @@ with tab1:
           stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
           prob_rigore_si = min(0.50, max(0.22, 0.25 + (xg_c + xg_o) * 0.04))
 
-          # Funzione di clipping per evitare percentuali irrealistiche al 100% o allo 0%
+          # Probabilità stimate per i Corner e i Cartellini (basate sulle medie calcolate)
+          prob_over85_corner = min(
+              0.88, max(0.35, 0.50 + (stimacorner - 9.0) * 0.08)
+          )
+          prob_under95_corner = 1.0 - prob_over85_corner
+
+          prob_over35_cartellini = min(
+              0.90, max(0.30, 0.50 + (stima_cartellini - 4.0) * 0.10)
+          )
+          prob_under45_cartellini = 1.0 - prob_over35_cartellini
+
+          # Funzione di clipping per evitare percentuali estreme
           def clamp(val):
             return min(0.95, max(0.05, val))
 
@@ -315,6 +326,10 @@ with tab1:
           prob_nogol = clamp(prob_nogol)
           prob_gol_1t = clamp(prob_gol_1t)
           prob_rigore_si = clamp(prob_rigore_si)
+          prob_over85_corner = clamp(prob_over85_corner)
+          prob_under95_corner = clamp(prob_under95_corner)
+          prob_over35_cartellini = clamp(prob_over35_cartellini)
+          prob_under45_cartellini = clamp(prob_under45_cartellini)
 
           lista_marcatori_casa = marcatori_per_squadra.get(casa, [])
           marcatore_c_str = (
@@ -350,6 +365,16 @@ with tab1:
               {"mercato": "No Gol", "prob": prob_nogol},
               {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
               {"mercato": "Rigore Sì", "prob": prob_rigore_si},
+              {"mercato": "Corner Over 8.5", "prob": prob_over85_corner},
+              {"mercato": "Corner Under 9.5", "prob": prob_under95_corner},
+              {
+                  "mercato": "Cartellini Over 3.5",
+                  "prob": prob_over35_cartellini,
+              },
+              {
+                  "mercato": "Cartellini Under 4.5",
+                  "prob": prob_under45_cartellini,
+              },
           ]
 
           miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
@@ -395,7 +420,7 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} con correzione probabilistica avanzata!"
+            f" {selezionato['nome']} con mercati estesi (Corner e Cartellini)!"
         )
         st.rerun()
       else:
@@ -450,8 +475,17 @@ with tab2:
           "Gol / No Gol",
           "Gol 1° Tempo",
           "Rigore",
+          "Corner",
+          "Cartellini",
       ],
-      default=["1X2", "Over/Under 1.5", "Over/Under 2.5", "Gol / No Gol"],
+      default=[
+          "1X2",
+          "Over/Under 1.5",
+          "Over/Under 2.5",
+          "Gol / No Gol",
+          "Corner",
+          "Cartellini",
+      ],
   )
 
   num_eventi = st.slider("Numero di eventi in schedina:", 1, 15, 4)
@@ -496,6 +530,10 @@ with tab2:
               if "Gol 1° Tempo" in opzioni_mercato and "Gol 1°T" in nome_m:
                 Includi = True
               if "Rigore" in opzioni_mercato and "Rigore" in nome_m:
+                Includi = True
+              if "Corner" in opzioni_mercato and "Corner" in nome_m:
+                Includi = True
+              if "Cartellini" in opzioni_mercato and "Cartellini" in nome_m:
                 Includi = True
 
             if Includi:
@@ -562,6 +600,7 @@ with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
       "Questa applicazione utilizza modelli statistici avanzati (Poisson con"
-      " Laplace/Bayesian Smoothing e clipping delle percentuali) per l'analisi"
-      " predittiva dei match su un orizzonte fino a 5 anni."
+      " Laplace/Bayesian Smoothing, clipping delle percentuali, stime su"
+      " corner e cartellini) per l'analisi predittiva dei match su un orizzonte"
+      " fino a 5 anni."
   )
