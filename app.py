@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
-# Stili CSS avanzati per un look moderno e pulito
+# Stili CSS avanzati per un look moderno, pulito e curato nei dettagli
 st.markdown(
     """
 <style>
@@ -27,6 +27,15 @@ st.markdown(
     .stTabs [aria-selected="true"] {
         background-color: #1abc9c !important;
         color: white !important;
+    }
+    /* Stile personalizzato per i container di configurazione schedina */
+    .filter-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
     }
 </style>
 """,
@@ -52,7 +61,7 @@ campionati = {
     "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
 }
 
-st.title("⚽⚽ VIGANA  Centro Analisi Calcio Pro ⚽⚽")
+st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -64,6 +73,8 @@ if "archivio_partite_globali" not in st.session_state:
   st.session_state.archivio_partite_globali = []
 if "ultimo_report" not in st.session_state:
   st.session_state.ultimo_report = []
+if "schedina_generata" not in st.session_state:
+  st.session_state.schedina_generata = None
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
@@ -441,11 +452,14 @@ with tab2:
         set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
 
-    col_f1, col_f2 = st.columns([2, 2])
+    # --- SEZIONE FILTRI GRAFICA RINNOVATA (CARD DESIGN) ---
+    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
+    st.markdown("#### ⚙️ Configurazione Filtri Schedina")
+
+    col_f1, col_f2 = st.columns(2)
     with col_f1:
-      # Modificato da selectbox a multiselect per consentire la scelta di PIÙ campionati
       campionati_scelti = st.multiselect(
-          "Seleziona uno o più campionati da giocare:",
+          "🏆 Seleziona Campionati:",
           options=campionati_presenti,
           default=campionati_presenti,
       )
@@ -471,15 +485,15 @@ with tab2:
 
     with col_f2:
       mercati_selezionati = st.multiselect(
-          "Scegli una o più opzioni di mercato desiderate:",
+          "🎯 Scegli Opzioni di Mercato:",
           options=tutti_i_mercati_possibili,
           default=["Over 1.5", "Gol"],
       )
 
-    col_f3, col_f4 = st.columns([2, 2])
+    col_f3, col_f4 = st.columns(2)
     with col_f3:
       num_eventi = st.number_input(
-          "Numero di eventi in schedina:",
+          "🔢 Numero di eventi in schedina:",
           min_value=1,
           max_value=max(1, len(st.session_state.archivio_partite_globali)),
           value=min(5, len(st.session_state.archivio_partite_globali)),
@@ -487,81 +501,99 @@ with tab2:
 
     with col_f4:
       budget = st.number_input(
-          "Budget puntata (€):", min_value=1.00, max_value=1000.00, value=5.00
+          "💰 Budget puntata (€):",
+          min_value=1.00,
+          max_value=1000.00,
+          value=5.00,
       )
 
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Filtriamo le partite in base ai campionati multipli scelti
-    partite_filtrate = [
-        p
-        for p in st.session_state.archivio_partite_globali
-        if p["Campionato"] in campionati_scelti
-    ]
-
-    selezioni_schedina = []
-    if partite_filtrate:
-      partite_campione = random.sample(
-          partite_filtrate, min(num_eventi, len(partite_filtrate))
+    # --- TASTINO CENTRALE DEDICATO "GENERA SCHEDINA" ---
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+      btn_genera_schedina = st.button(
+          "🚀 Genera Schedina", type="primary", use_container_width=True
       )
 
-      for p in partite_campione:
-        mercato_scelto = None
-        prob_val = 0.0
+    if btn_genera_schedina:
+      partite_filtrate = [
+          p
+          for p in st.session_state.archivio_partite_globali
+          if p["Campionato"] in campionati_scelti
+      ]
 
-        if mercati_selezionati:
-          mercati_compatibili = []
-          for m in p["_tutti_i_mercati"]:
-            for ms in mercati_selezionati:
-              if ms.lower() in m["mercato"].lower():
-                mercati_compatibili.append(m)
-
-          if mercati_compatibili:
-            scelta_compatibile = max(mercati_compatibili, key=lambda x: x["prob"])
-            mercato_scelto = scelta_compatibile["mercato"]
-            prob_val = scelta_compatibile["prob"]
-
-        if not mercato_scelto:
-          mercato_scelto = p["_miglior_mercato"]
-          prob_val = p["_miglior_prob"]
-
-        quota_stimata = round(
-            max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+      selezioni_schedina = []
+      if partite_filtrate:
+        partite_campione = random.sample(
+            partite_filtrate, min(num_eventi, len(partite_filtrate))
         )
 
-        selezioni_schedina.append({
-            "Incontro": p["Incontro"],
-            "Data e Ora": p["📅 Data e Ora"],
-            "Pronostico": mercato_scelto,
-            "Probabilità": f"{prob_val * 100:.1f}%",
-            "Quota Stimata": quota_stimata,
-        })
+        for p in partite_campione:
+          mercato_scelto = None
+          prob_val = 0.0
 
-    if selezioni_schedina:
-      st.markdown("### 📋 La tua Schedina Consigliata")
-      df_schedina = pd.DataFrame(selezioni_schedina)
-      st.dataframe(df_schedina, use_container_width=True)
+          if mercati_selezionati:
+            mercati_compatibili = []
+            for m in p["_tutti_i_mercati"]:
+              for ms in mercati_selezionati:
+                if ms.lower() in m["mercato"].lower():
+                  mercati_compatibili.append(m)
 
-      quota_totale = 1.0
-      for s in selezioni_schedina:
-        quota_totale *= s["Quota Stimata"]
+            if mercati_compatibili:
+              scelta_compatibile = max(
+                  mercati_compatibili, key=lambda x: x["prob"]
+              )
+              mercato_scelto = scelta_compatibile["mercato"]
+              prob_val = scelta_compatibile["prob"]
 
-      vincita_potenziale = budget * quota_totale
+          if not mercato_scelto:
+            mercato_scelto = p["_miglior_mercato"]
+            prob_val = p["_miglior_prob"]
 
-      st.success(
-          f"📊 **Quota Totale Combinata:** {quota_totale:.2f} | 💰 **Vincita"
-          f" Potenziale:** {vincita_potenziale:.2f} €"
-      )
-    else:
-      st.warning(
-          "Nessuna partita disponibile con i campionati o mercati"
-          " selezionati. Seleziona almeno un campionato."
-      )
+          quota_stimata = round(
+              max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+          )
+
+          selezioni_schedina.append({
+              "Incontro": p["Incontro"],
+              "Data e Ora": p["📅 Data e Ora"],
+              "Pronostico": mercato_scelto,
+              "Probabilità": f"{prob_val * 100:.1f}%",
+              "Quota Stimata": quota_stimata,
+          })
+
+      st.session_state.schedina_generata = selezioni_schedina
+
+    # Mostra la schedina se è stata generata in questa sessione
+    if st.session_state.schedina_generata is not None:
+      selezioni_schedina = st.session_state.schedina_generata
+      if selezioni_schedina:
+        st.markdown("---")
+        st.markdown("### 📋 La tua Schedina Consigliata")
+        df_schedina = pd.DataFrame(selezioni_schedina)
+        st.dataframe(df_schedina, use_container_width=True)
+
+        quota_totale = 1.0
+        for s in selezioni_schedina:
+          quota_totale *= s["Quota Stimata"]
+
+        vincita_potenziale = budget * quota_totale
+
+        st.success(
+            f"📊 **Quota Totale Combinata:** {quota_totale:.2f} | 💰 **Vincita"
+            f" Potenziale:** {vincita_potenziale:.2f} €"
+        )
+      else:
+        st.warning(
+            "⚠️ Nessuna partita disponibile con i campionati o i mercati"
+            " selezionati. Riprova modificando i filtri."
+        )
 
 with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **Centro Analisi Calcio Pro**. 
     * **Tab 1:** Analizza i campionati desiderati caricando i dati storici e le giornate correnti.
-    * **Tab 2:** Configura la tua schedina selezionando **più campionati**, spuntando **più opzioni di mercato** (es. *Over 1.5*, *Gol*, *Angoli*, *Cartellini*, *Marcatori*), impostando il numero di eventi e il budget.
+    * **Tab 2:** Configura la tua schedina selezionando i campionati e i mercati preferiti all'interno del pannello filtri, quindi clicca su **Genera Schedina** per visualizzare il pronostico ottimizzato.
     """)
