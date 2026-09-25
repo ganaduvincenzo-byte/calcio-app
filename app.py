@@ -162,6 +162,7 @@ with tab1:
           except Exception:
             pass
 
+      # Caricamento marcatori basato su ID squadra (robusto e senza errori di nome)
       url_scorers = (
           f"https://api.football-data.org/v4/competitions/{league_code}/scorers"
       )
@@ -171,15 +172,15 @@ with tab1:
           data_sc = resp_sc.json()
           for scorer in data_sc.get("scorers", []):
             p_nome = scorer.get("player", {}).get("name", "Sconosciuto")
-            s_nome = scorer.get("team", {}).get("name", "")
-            if s_nome:
-              if s_nome not in marcatori_per_squadra:
-                marcatori_per_squadra[s_nome] = []
-              marcatori_per_squadra[s_nome].append(p_nome)
+            t_id = scorer.get("team", {}).get("id")
+            if t_id:
+              if t_id not in marcatori_per_squadra:
+                marcatori_per_squadra[t_id] = []
+              marcatori_per_squadra[t_id].append(p_nome)
       except Exception:
         pass
 
-      # Filtraggio rigoroso delle sole partite future reali (escludendo quelle passate)
+      # Filtraggio rigoroso delle sole partite future reali
       matchday_list = []
       if tutti_corrente:
         ora_attuale = datetime.datetime.utcnow()
@@ -242,6 +243,8 @@ with tab1:
         for match in matchday_list:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
+          home_id = match["homeTeam"].get("id")
+          away_id = match["awayTeam"].get("id")
 
           chiave_match = f"{casa}-{ospite}"
           if chiave_match in incontri_visti:
@@ -364,14 +367,15 @@ with tab1:
           prob_over35_cartellini = clamp(prob_over35_cartellini)
           prob_under45_cartellini = clamp(prob_under45_cartellini)
 
-          lista_marcatori_casa = marcatori_per_squadra.get(casa, [])
+          # Recupero marcatori reali tramite ID squadra
+          lista_marcatori_casa = marcatori_per_squadra.get(home_id, [])
           marcatore_c_str = (
               lista_marcatori_casa[0]
               if lista_marcatori_casa
               else f"Attaccante ({casa})"
           )
 
-          lista_marcatori_ospite = marcatori_per_squadra.get(ospite, [])
+          lista_marcatori_ospite = marcatori_per_squadra.get(away_id, [])
           marcatore_o_str = (
               lista_marcatori_ospite[0]
               if lista_marcatori_ospite
