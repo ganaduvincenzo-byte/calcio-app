@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="VIGANA Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
-# Stili CSS avanzati per un look super figo, moderno e accattivante
+# Stili CSS avanzati per un look super moderno e accattivante
 st.markdown(
     """
 <style>
@@ -54,35 +54,68 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con icone bandiera ufficiali tramite immagini in miniatura
+# Elenco delle competizioni con le immagini delle bandiere e i nomi ufficiali
 campionati = {
     "PL": {
         "nome": "Premier League",
         "bandiera": "https://flagcdn.com/w40/gb-eng.png",
+        "etichetta": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League",
     },
-    "PD": {"nome": "La Liga", "bandiera": "https://flagcdn.com/w40/es.png"},
-    "SA": {"nome": "Serie A", "bandiera": "https://flagcdn.com/w40/it.png"},
-    "BL1": {"nome": "Bundesliga", "bandiera": "https://flagcdn.com/w40/de.png"},
-    "FL1": {"nome": "Ligue 1", "bandiera": "https://flagcdn.com/w40/fr.png"},
+    "PD": {
+        "nome": "La Liga",
+        "bandiera": "https://flagcdn.com/w40/es.png",
+        "etichetta": "🇪🇸 La Liga",
+    },
+    "SA": {
+        "nome": "Serie A",
+        "bandiera": "https://flagcdn.com/w40/it.png",
+        "etichetta": "🇮🇹 Serie A",
+    },
+    "BL1": {
+        "nome": "Bundesliga",
+        "bandiera": "https://flagcdn.com/w40/de.png",
+        "etichetta": "🇩🇪 Bundesliga",
+    },
+    "FL1": {
+        "nome": "Ligue 1",
+        "bandiera": "https://flagcdn.com/w40/fr.png",
+        "etichetta": "🇫🇷 Ligue 1",
+    },
     "CL": {
         "nome": "Champions League",
         "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_UEFA_Champions_League_logo_2.svg/30px-The_UEFA_Champions_League_logo_2.svg.png",
+        "etichetta": "🇪🇺 Champions League",
     },
     "EL": {
         "nome": "Europa League",
         "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/UEFA_Europa_League_logo_%282021%29.svg/30px-UEFA_Europa_League_logo_%282021%29.svg.png",
+        "etichetta": "🇪🇺 Europa League",
     },
-    "DED": {"nome": "Eredivisie", "bandiera": "https://flagcdn.com/w40/nl.png"},
+    "DED": {
+        "nome": "Eredivisie",
+        "bandiera": "https://flagcdn.com/w40/nl.png",
+        "etichetta": "🇳🇱 Eredivisie",
+    },
     "PPL": {
         "nome": "Primeira Liga",
         "bandiera": "https://flagcdn.com/w40/pt.png",
+        "etichetta": "🇵🇹 Primeira Liga",
     },
-    "BSA": {"nome": "Brasileirão", "bandiera": "https://flagcdn.com/w40/br.png"},
+    "BSA": {
+        "nome": "Brasileirão",
+        "bandiera": "https://flagcdn.com/w40/br.png",
+        "etichetta": "🇧🇷 Brasileirão",
+    },
     "CLI": {
         "nome": "Copa Libertadores",
         "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Copa_Libertadores_logo_current.svg/30px-Copa_Libertadores_logo_current.svg.png",
+        "etichetta": "🌎 Copa Libertadores",
     },
-    "WC": {"nome": "World Cup", "bandiera": "https://flagcdn.com/w40/un.png"},
+    "WC": {
+        "nome": "World Cup",
+        "bandiera": "https://flagcdn.com/w40/un.png",
+        "etichetta": "🌐 World Cup",
+    },
 }
 
 st.markdown(
@@ -111,7 +144,6 @@ tab1, tab2, tab3 = st.tabs(
 with tab1:
   st.subheader("🌍 Seleziona i Campionati e Avvia l'Analisi Multi-Competizione")
 
-  # --- PANNELLO SELEZIONE CAMPIONATI TRAMITE GRIGLIA INTERATTIVA CON BANDIERE ---
   st.markdown(
       '<div class="dashboard-card"><div class="card-title">🏆 Seleziona Campionati'
       " da Analizzare</div>",
@@ -138,21 +170,10 @@ with tab1:
   for i, (code, info) in enumerate(campionati.items()):
     target_col = grid_cols[i % 3]
     with target_col:
-      # Mostriamo la bandierina come immagine affiancata alla checkbox tramite HTML/Markdown pulito
-      st.markdown(
-          f"""
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                <img src="{info['bandiera']}" width="24" style="border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
-                <span style="font-weight: 500; color: #f8fafc; font-size: 0.95rem;">{info['nome']}</span>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
       is_checked = st.checkbox(
-          "Abilita",
+          f"{info['etichetta']}",
           value=code in st.session_state.leghe_selezionate_tab1,
           key=f"chk_t1_{code}",
-          label_visibility="collapsed",
       )
       if is_checked:
         leghe_scelte_temp.append(code)
@@ -190,7 +211,7 @@ with tab1:
 
       for idx, league_code in enumerate(leghe_selezionate):
         selezionato = campionati[league_code]
-        nome_completo = selezionato["nome"]
+        nome_completo = selezionato["etichetta"]
         progress_bar.progress(
             (idx + 1) / tot_leghe,
             text=f"Analisi in corso per {nome_completo}...",
@@ -611,9 +632,18 @@ with tab2:
           max_value=max(1, len(st.session_state.archivio_partite_globali)),
           value=min(5, len(st.session_state.archivio_partite_globali)),
       )
-      budget = st.number_input(
-          "💰 Budget (€):", min_value=1.00, max_value=1000.00, value=10.00
-      )
+      col_b_bud, col_b_quot = st.columns(2)
+      with col_b_bud:
+        budget = st.number_input(
+            "💰 Budget (€):", min_value=1.00, max_value=1000.00, value=10.00
+        )
+      with col_b_quot:
+        quota_desiderata = st.number_input(
+            "🎯 Quota Totale Voleva:",
+            min_value=1.10,
+            max_value=500.00,
+            value=10.00,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -632,43 +662,47 @@ with tab2:
 
       selezioni_schedina = []
       if partite_filtrate:
-        partite_campione = random.sample(
-            partite_filtrate, min(num_eventi, len(partite_filtrate))
-        )
+        # Algoritmo intelligente: calcoliamo la quota target per singolo evento
+        target_singola = max(1.05, quota_desiderata ** (1.0 / num_eventi))
 
-        for p in partite_campione:
-          mercato_scelto = None
-          prob_val = 0.0
+        pool_partite = list(partite_filtrate)
+        random.shuffle(pool_partite)
+
+        partite_selezionate_temp = []
+        for _ in range(min(num_eventi, len(pool_partite))):
+          if not pool_partite:
+            break
+          p = pool_partite.pop(0)
+
+          # Raccogliamo tutte le opzioni di mercato valide
+          opzioni_valide = []
+          for m in p["_tutti_i_mercati"]:
+            q_est = round(
+                max(1.05, min(5.00, (1.0 / max(0.05, m["prob"])) * 0.92)), 2
+            )
+            opzioni_valide.append((m["mercato"], m["prob"], q_est))
 
           if mercati_selezionati:
-            mercati_compatibili = []
-            for m in p["_tutti_i_mercati"]:
-              for ms in mercati_selezionati:
-                if ms.lower() in m["mercato"].lower():
-                  mercati_compatibili.append(m)
+            filtrate_utente = [
+                op
+                for op in opzioni_valide
+                if any(ms.lower() in op[0].lower() for ms in mercati_selezionati)
+            ]
+            if filtrate_utente:
+              opzioni_valide = filtrate_utente
 
-            if mercati_compatibili:
-              scelta_compatibile = max(
-                  mercati_compatibili, key=lambda x: x["prob"]
-              )
-              mercato_scelto = scelta_compatibile["mercato"]
-              prob_val = scelta_compatibile["prob"]
-
-          if not mercato_scelto:
-            mercato_scelto = p["_miglior_mercato"]
-            prob_val = p["_miglior_prob"]
-
-          quota_stimata = round(
-              max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+          # Scegliamo il mercato la cui quota si avvicina di più alla quota singola ideale
+          miglior_opzione = min(
+              opzioni_valide, key=lambda x: abs(x[2] - target_singola)
           )
 
           selezioni_schedina.append({
               "Campionato": p["Campionato"],
               "Incontro": p["Incontro"],
               "Data e Ora": p["📅 Data e Ora"],
-              "Pronostico": mercato_scelto,
-              "Probabilità": f"{prob_val * 100:.1f}%",
-              "Quota Stimata": quota_stimata,
+              "Pronostico": miglior_opzione[0],
+              "Probabilità": f"{miglior_opzione[1] * 100:.1f}%",
+              "Quota Stimata": miglior_opzione[2],
           })
 
       st.session_state.schedina_generata = selezioni_schedina
@@ -722,6 +756,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona i campionati desiderati tramite la griglia interattiva con le bandiere ufficiali e avvia l'analisi.
-    * **Tab 2:** Scegli i campionati e i mercati desiderati, imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
+    * **Tab 1:** Seleziona i campionati desiderati tramite la griglia interattiva con le bandiere e avvia l'analisi.
+    * **Tab 2:** Scegli i campionati, i mercati, imposta il budget e indica la **Quota Totale Desiderata** per generare la schedina su misura.
     """)
