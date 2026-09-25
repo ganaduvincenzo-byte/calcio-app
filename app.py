@@ -47,7 +47,7 @@ campionati = {
     "UNL": {"nome": "UEFA Nations League", "bandiera": "🏆"},
 }
 
-st.title("⚽ Viganà Analisi Calcio Pro")
+st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -111,19 +111,16 @@ with tab1:
 
   if btn_analizza:
     with st.spinner(
-        f"⏳ Caricamento calendario e storico per {selezionato['bandiera']}"
-        f" {selezionato['nome']}..."
+        f"⏳ Caricamento calendario e storico reale per"
+        f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
       partite_finite_totali = []
       tutti_corrente = []
       marcatori_per_squadra = {}
 
       anno_corrente = datetime.datetime.now().year
-      oggi_str = datetime.datetime.now().strftime("%Y-%m-%d")
-      domani_str = (
-          datetime.datetime.now() + datetime.timedelta(days=1)
-      ).strftime("%Y-%m-%d")
 
+      # Chiamata API reale senza dati inventati
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
@@ -162,109 +159,6 @@ with tab1:
           except Exception:
             pass
 
-      # Fallback ampliato e completo con tutte le principali partite dei gironi di Nations League
-      if not tutti_corrente:
-        if league_code == "UNL":
-          tutti_corrente = [
-              {
-                  "homeTeam": {"name": "Italia"},
-                  "awayTeam": {"name": "Belgio"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Francia"},
-                  "awayTeam": {"name": "Israele"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Inghilterra"},
-                  "awayTeam": {"name": "Grecia"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Austria"},
-                  "awayTeam": {"name": "Kazakistan"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Norvegia"},
-                  "awayTeam": {"name": "Slovenia"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Ungheria"},
-                  "awayTeam": {"name": "Olanda"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{domani_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Germania"},
-                  "awayTeam": {"name": "Bosnia-Erzegovina"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{domani_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Spagna"},
-                  "awayTeam": {"name": "Danimarca"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{domani_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Croazia"},
-                  "awayTeam": {"name": "Scozia"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{domani_str}T18:00:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Polonia"},
-                  "awayTeam": {"name": "Portogallo"},
-                  "status": "SCHEDULED",
-                  "matchday": 3,
-                  "utcDate": f"{domani_str}T20:45:00Z",
-              },
-          ]
-        elif league_code == "SA":
-          tutti_corrente = [
-              {
-                  "homeTeam": {"name": "Inter"},
-                  "awayTeam": {"name": "Milan"},
-                  "status": "SCHEDULED",
-                  "matchday": 1,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              },
-              {
-                  "homeTeam": {"name": "Juventus"},
-                  "awayTeam": {"name": "Napoli"},
-                  "status": "SCHEDULED",
-                  "matchday": 1,
-                  "utcDate": f"{oggi_str}T18:00:00Z",
-              },
-          ]
-        else:
-          tutti_corrente = [
-              {
-                  "homeTeam": {"name": "Squadra Casa A"},
-                  "awayTeam": {"name": "Squadra Ospite A"},
-                  "status": "SCHEDULED",
-                  "matchday": 1,
-                  "utcDate": f"{oggi_str}T20:45:00Z",
-              }
-          ]
-
       url_scorers = (
           f"https://api.football-data.org/v4/competitions/{league_code}/scorers"
       )
@@ -282,6 +176,7 @@ with tab1:
       except Exception:
         pass
 
+      # Filtraggio delle sole partite future reali
       matchday_list = []
       if tutti_corrente:
         future_matches = [
@@ -297,7 +192,7 @@ with tab1:
               if m.get("matchday") == primo_matchday_futuro
           ]
         else:
-          matchday_list = tutti_corrente[:15]
+          matchday_list = []
 
       if partite_finite_totali:
         media_casa = sum(
@@ -544,7 +439,9 @@ with tab1:
         st.rerun()
       else:
         st.warning(
-            "⚠️ Nessuna partita trovata per questa competizione al momento."
+            "⚠️ Al momento non ci sono partite future programmate per questa"
+            " competizione nel calendario ufficiale dell'API (o il piano"
+            " gratuito non copre le date odierne per questo torneo)."
         )
 
   if st.session_state.get("ultimo_report"):
