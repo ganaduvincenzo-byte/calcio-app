@@ -59,27 +59,27 @@ campionati = {
     "PL": {
         "nome": "Premier League",
         "bandiera": "https://flagcdn.com/w40/gb-eng.png",
-        "etichetta": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League",
+        "etichetta": "EN  Inghilterra Premier League",
     },
     "PD": {
         "nome": "La Liga",
         "bandiera": "https://flagcdn.com/w40/es.png",
-        "etichetta": "🇪🇸 La Liga",
+        "etichetta": "🇪🇸  Spagna La Liga",
     },
     "SA": {
         "nome": "Serie A",
         "bandiera": "https://flagcdn.com/w40/it.png",
-        "etichetta": "🇮🇹 Serie A",
+        "etichetta": "🇮🇹 Italia Serie A",
     },
     "BL1": {
         "nome": "Bundesliga",
         "bandiera": "https://flagcdn.com/w40/de.png",
-        "etichetta": "🇩🇪 Bundesliga",
+        "etichetta": "🇩🇪 Germania Bundesliga",
     },
     "FL1": {
         "nome": "Ligue 1",
         "bandiera": "https://flagcdn.com/w40/fr.png",
-        "etichetta": "🇫🇷 Ligue 1",
+        "etichetta": "🇫🇷 Francia Ligue 1",
     },
     "CL": {
         "nome": "Champions League",
@@ -94,17 +94,17 @@ campionati = {
     "DED": {
         "nome": "Eredivisie",
         "bandiera": "https://flagcdn.com/w40/nl.png",
-        "etichetta": "🇳🇱 Eredivisie",
+        "etichetta": "🇳🇱  Olanda Eredivisie",
     },
     "PPL": {
         "nome": "Primeira Liga",
         "bandiera": "https://flagcdn.com/w40/pt.png",
-        "etichetta": "🇵🇹 Primeira Liga",
+        "etichetta": "🇵🇹 Portogallo Primeira Liga",
     },
     "BSA": {
         "nome": "Brasileirão",
         "bandiera": "https://flagcdn.com/w40/br.png",
-        "etichetta": "🇧🇷 Brasileirão",
+        "etichetta": "🇧🇷 Brasile Brasileirão",
     },
     "CLI": {
         "nome": "Copa Libertadores",
@@ -122,7 +122,7 @@ st.markdown(
     """
     <div style="text-align: center; margin-bottom: 20px;">
         <h1>⚽ ⚽ ⚽ VIGANA Centro Analisi Calcio Pro ⚽ ⚽ ⚽</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner, Cartellini, Data/Ora e marcatori reali.</p>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), </p>
     </div>
     """,
     unsafe_allow_html=True,
