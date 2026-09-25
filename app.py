@@ -54,67 +54,98 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con le immagini delle bandiere e i nomi ufficiali
+# Elenco delle competizioni con le immagini delle bandiere reali
 campionati = {
     "PL": {
         "nome": "Premier League",
-        "bandiera": "https://flagcdn.com/w40/gb-eng.png",
-        "etichetta": "EN  Inghilterra Premier League",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/gb-eng.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Premier'
+            " League"
+        ),
     },
     "PD": {
         "nome": "La Liga",
-        "bandiera": "https://flagcdn.com/w40/es.png",
-        "etichetta": "🇪🇸  Spagna La Liga",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/es.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> La Liga'
+        ),
     },
     "SA": {
         "nome": "Serie A",
-        "bandiera": "https://flagcdn.com/w40/it.png",
-        "etichetta": "🇮🇹 Italia Serie A",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/it.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Serie A'
+        ),
     },
     "BL1": {
         "nome": "Bundesliga",
-        "bandiera": "https://flagcdn.com/w40/de.png",
-        "etichetta": "🇩🇪 Germania Bundesliga",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/de.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Bundesliga'
+        ),
     },
     "FL1": {
         "nome": "Ligue 1",
-        "bandiera": "https://flagcdn.com/w40/fr.png",
-        "etichetta": "🇫🇷 Francia Ligue 1",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/fr.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Ligue 1'
+        ),
     },
     "CL": {
         "nome": "Champions League",
-        "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_UEFA_Champions_League_logo_2.svg/30px-The_UEFA_Champions_League_logo_2.svg.png",
-        "etichetta": "🇪🇺 Champions League",
+        "etichetta": (
+            '<img'
+            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_UEFA_Champions_League_logo_2.svg/20px-The_UEFA_Champions_League_logo_2.svg.png"'
+            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            " Champions League"
+        ),
     },
     "EL": {
         "nome": "Europa League",
-        "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/UEFA_Europa_League_logo_%282021%29.svg/30px-UEFA_Europa_League_logo_%282021%29.svg.png",
-        "etichetta": "🇪🇺 Europa League",
+        "etichetta": (
+            '<img'
+            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/UEFA_Europa_League_logo_%282021%29.svg/20px-UEFA_Europa_League_logo_%282021%29.svg.png"'
+            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            " Europa League"
+        ),
     },
     "DED": {
         "nome": "Eredivisie",
-        "bandiera": "https://flagcdn.com/w40/nl.png",
-        "etichetta": "🇳🇱  Olanda Eredivisie",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/nl.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Eredivisie'
+        ),
     },
     "PPL": {
         "nome": "Primeira Liga",
-        "bandiera": "https://flagcdn.com/w40/pt.png",
-        "etichetta": "🇵🇹 Portogallo Primeira Liga",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/pt.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Primeira Liga'
+        ),
     },
     "BSA": {
         "nome": "Brasileirão",
-        "bandiera": "https://flagcdn.com/w40/br.png",
-        "etichetta": "🇧🇷 Brasile Brasileirão",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/br.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> Brasileirão'
+        ),
     },
     "CLI": {
         "nome": "Copa Libertadores",
-        "bandiera": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Copa_Libertadores_logo_current.svg/30px-Copa_Libertadores_logo_current.svg.png",
-        "etichetta": "🌎 Copa Libertadores",
+        "etichetta": (
+            '<img'
+            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Copa_Libertadores_logo_current.svg/20px-Copa_Libertadores_logo_current.svg.png"'
+            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            " Copa Libertadores"
+        ),
     },
     "WC": {
         "nome": "World Cup",
-        "bandiera": "https://flagcdn.com/w40/un.png",
-        "etichetta": "🌐 World Cup",
+        "etichetta": (
+            '<img src="https://flagcdn.com/w20/un.png" width="20"'
+            ' style="vertical-align: middle; margin-right: 6px;"> World Cup'
+        ),
     },
 }
 
@@ -122,7 +153,7 @@ st.markdown(
     """
     <div style="text-align: center; margin-bottom: 20px;">
         <h1>⚽ ⚽ ⚽ VIGANA Centro Analisi Calcio Pro ⚽ ⚽ ⚽</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), </p>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner, Cartellini, Data/Ora e marcatori reali.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -170,10 +201,19 @@ with tab1:
   for i, (code, info) in enumerate(campionati.items()):
     target_col = grid_cols[i % 3]
     with target_col:
+      st.markdown(
+          f"""
+            <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                <span style="font-size: 0.95rem; color: #f8fafc;">{info['etichetta']}</span>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
       is_checked = st.checkbox(
-          f"{info['etichetta']}",
+          "Seleziona",
           value=code in st.session_state.leghe_selezionate_tab1,
           key=f"chk_t1_{code}",
+          label_visibility="collapsed",
       )
       if is_checked:
         leghe_scelte_temp.append(code)
@@ -211,10 +251,10 @@ with tab1:
 
       for idx, league_code in enumerate(leghe_selezionate):
         selezionato = campionati[league_code]
-        nome_completo = selezionato["etichetta"]
+        nome_pulito = selezionato["nome"]
         progress_bar.progress(
             (idx + 1) / tot_leghe,
-            text=f"Analisi in corso per {nome_completo}...",
+            text=f"Analisi in corso per {nome_pulito}...",
         )
 
         partite_finite_totali = []
@@ -483,7 +523,7 @@ with tab1:
           miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
 
           diz_partita = {
-              "Campionato": nome_completo,
+              "Campionato": nome_pulito,
               "Codice": league_code,
               "📅 Data e Ora": data_ora_formattata,
               "Incontro": f"{casa} - {ospite}",
@@ -639,7 +679,7 @@ with tab2:
         )
       with col_b_quot:
         quota_desiderata = st.number_input(
-            "🎯 Quota Totale Voleva:",
+            "🎯 Quota Totale Desiderata:",
             min_value=1.10,
             max_value=500.00,
             value=10.00,
@@ -662,19 +702,15 @@ with tab2:
 
       selezioni_schedina = []
       if partite_filtrate:
-        # Algoritmo intelligente: calcoliamo la quota target per singolo evento
         target_singola = max(1.05, quota_desiderata ** (1.0 / num_eventi))
-
         pool_partite = list(partite_filtrate)
         random.shuffle(pool_partite)
 
-        partite_selezionate_temp = []
         for _ in range(min(num_eventi, len(pool_partite))):
           if not pool_partite:
             break
           p = pool_partite.pop(0)
 
-          # Raccogliamo tutte le opzioni di mercato valide
           opzioni_valide = []
           for m in p["_tutti_i_mercati"]:
             q_est = round(
@@ -691,7 +727,6 @@ with tab2:
             if filtrate_utente:
               opzioni_valide = filtrate_utente
 
-          # Scegliamo il mercato la cui quota si avvicina di più alla quota singola ideale
           miglior_opzione = min(
               opzioni_valide, key=lambda x: abs(x[2] - target_singola)
           )
@@ -756,6 +791,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona i campionati desiderati tramite la griglia interattiva con le bandiere e avvia l'analisi.
-    * **Tab 2:** Scegli i campionati, i mercati, imposta il budget e indica la **Quota Totale Desiderata** per generare la schedina su misura.
+    * **Tab 1:** Seleziona i campionati desiderati con le relative bandiere reali e avvia l'analisi.
+    * **Tab 2:** Scegli i campionati, i mercati preferiti (Over, Under, ecc.), imposta il budget, indica la **Quota Totale Desiderata** e genera la schedina.
     """)
