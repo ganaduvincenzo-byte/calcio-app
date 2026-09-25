@@ -31,7 +31,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-API_KEY = "10ecb5beb7f7454cad0500778fa7d841"
+API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
 campionati = {
