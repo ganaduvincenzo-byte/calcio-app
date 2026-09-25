@@ -54,13 +54,13 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con le immagini delle bandiere reali
+# Elenco delle competizioni con le immagini delle bandiere e i nomi scritti accanto
 campionati = {
     "PL": {
         "nome": "Premier League",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/gb-eng.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Premier'
+            ' style="vertical-align: middle; margin-right: 8px;"> Premier'
             " League"
         ),
     },
@@ -68,28 +68,28 @@ campionati = {
         "nome": "La Liga",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/es.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> La Liga'
+            ' style="vertical-align: middle; margin-right: 8px;"> La Liga'
         ),
     },
     "SA": {
         "nome": "Serie A",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/it.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Serie A'
+            ' style="vertical-align: middle; margin-right: 8px;"> Serie A'
         ),
     },
     "BL1": {
         "nome": "Bundesliga",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/de.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Bundesliga'
+            ' style="vertical-align: middle; margin-right: 8px;"> Bundesliga'
         ),
     },
     "FL1": {
         "nome": "Ligue 1",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/fr.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Ligue 1'
+            ' style="vertical-align: middle; margin-right: 8px;"> Ligue 1'
         ),
     },
     "CL": {
@@ -97,7 +97,7 @@ campionati = {
         "etichetta": (
             '<img'
             ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_UEFA_Champions_League_logo_2.svg/20px-The_UEFA_Champions_League_logo_2.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
             " Champions League"
         ),
     },
@@ -106,7 +106,7 @@ campionati = {
         "etichetta": (
             '<img'
             ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/UEFA_Europa_League_logo_%282021%29.svg/20px-UEFA_Europa_League_logo_%282021%29.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
             " Europa League"
         ),
     },
@@ -114,21 +114,21 @@ campionati = {
         "nome": "Eredivisie",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/nl.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Eredivisie'
+            ' style="vertical-align: middle; margin-right: 8px;"> Eredivisie'
         ),
     },
     "PPL": {
         "nome": "Primeira Liga",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/pt.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Primeira Liga'
+            ' style="vertical-align: middle; margin-right: 8px;"> Primeira Liga'
         ),
     },
     "BSA": {
         "nome": "Brasileirão",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/br.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> Brasileirão'
+            ' style="vertical-align: middle; margin-right: 8px;"> Brasileirão'
         ),
     },
     "CLI": {
@@ -136,7 +136,7 @@ campionati = {
         "etichetta": (
             '<img'
             ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Copa_Libertadores_logo_current.svg/20px-Copa_Libertadores_logo_current.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 6px;">'
+            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
             " Copa Libertadores"
         ),
     },
@@ -144,7 +144,7 @@ campionati = {
         "nome": "World Cup",
         "etichetta": (
             '<img src="https://flagcdn.com/w20/un.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 6px;"> World Cup'
+            ' style="vertical-align: middle; margin-right: 8px;"> World Cup'
         ),
     },
 }
@@ -201,19 +201,21 @@ with tab1:
   for i, (code, info) in enumerate(campionati.items()):
     target_col = grid_cols[i % 3]
     with target_col:
+      # Riga combinata con checkbox e etichetta HTML (bandiera + nome campionato)
+      is_checked = st.checkbox(
+          info["nome"],
+          value=code in st.session_state.leghe_selezionate_tab1,
+          key=f"chk_t1_{code}",
+          help=info["nome"],
+      )
+      # Visualizziamo la bandiera e il nome formattati elegantemente subito sopra o affiancati
       st.markdown(
           f"""
-            <div style="display: flex; align-items: center; margin-bottom: 2px;">
-                <span style="font-size: 0.95rem; color: #f8fafc;">{info['etichetta']}</span>
+            <div style="margin-top: -30px; margin-left: 28px; margin-bottom: 10px; pointer-events: none;">
+                <span style="font-size: 0.95rem; color: #f8fafc; font-weight: 500;">{info['etichetta']}</span>
             </div>
             """,
           unsafe_allow_html=True,
-      )
-      is_checked = st.checkbox(
-          "Seleziona",
-          value=code in st.session_state.leghe_selezionate_tab1,
-          key=f"chk_t1_{code}",
-          label_visibility="collapsed",
       )
       if is_checked:
         leghe_scelte_temp.append(code)
@@ -791,6 +793,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona i campionati desiderati con le relative bandiere reali e avvia l'analisi.
-    * **Tab 2:** Scegli i campionati, i mercati preferiti (Over, Under, ecc.), imposta il budget, indica la **Quota Totale Desiderata** e genera la schedina.
+    * **Tab 1:** Seleziona i campionati desiderati con le bandiere reali e i nomi ben visibili accanto, quindi avvia l'analisi.
+    * **Tab 2:** Scegli i campionati, i mercati preferiti, imposta il budget, indica la **Quota Totale Desiderata** e genera la schedina su misura.
     """)
