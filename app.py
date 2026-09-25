@@ -82,7 +82,6 @@ with tab1:
   selezionato = campionati[league_code]
 
   with col2:
-    # Profondità storica ampliata fino a 5 anni
     num_stagioni = st.selectbox(
         "Profondità storica:",
         options=[1, 2, 3, 4, 5],
@@ -154,9 +153,7 @@ with tab1:
 
       # 3. Caricamento stagioni passate per lo storico (fino a 5 anni fa)
       if num_stagioni > 1:
-        anni_passati = [
-            anno_corrente - i for i in range(1, num_stagioni)
-        ]  # genera gli anni precedenti dinamicamente
+        anni_passati = [anno_corrente - i for i in range(1, num_stagioni)]
         for anno_p in anni_passati:
           url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}"
           try:
@@ -194,7 +191,7 @@ with tab1:
           if not matchday_list:
             matchday_list = tutti_corrente[:10]
 
-      # Calcolo medie gol
+      # Calcolo medie gol generali del campionato
       if partite_finite_totali:
         media_casa = sum(
             m["score"]["fullTime"]["home"]
@@ -211,7 +208,7 @@ with tab1:
             and m["score"]["fullTime"]["away"] is not None
         ) / max(1, len(partite_finite_totali))
       else:
-        media_casa, media_ospiti = 1.4, 1.1
+        media_casa, media_ospiti = 1.35, 1.10
 
       if len(matchday_list) > 0:
 
@@ -223,6 +220,7 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
+          # Calcolo xG con Bayesian / Laplace Smoothing per evitare distorsioni estreme
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -233,11 +231,14 @@ with tab1:
               and m["score"].get("fullTime")
               and m["score"]["fullTime"]["home"] is not None
           ]
-          xg_c = (
-              sum(valid_home_goals) / len(valid_home_goals)
-              if len(valid_home_goals) > 0
-              else media_casa
-          )
+          if len(valid_home_goals) > 0:
+            xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
+            # Smorzamento statistico verso la media del torneo per evitare valori assoluti sballati
+            xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
+                len(valid_home_goals) + 3
+            )
+          else:
+            xg_c = media_casa
 
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
@@ -249,11 +250,13 @@ with tab1:
               and m["score"].get("fullTime")
               and m["score"]["fullTime"]["away"] is not None
           ]
-          xg_o = (
-              sum(valid_away_goals) / len(valid_away_goals)
-              if len(valid_away_goals) > 0
-              else media_ospiti
-          )
+          if len(valid_away_goals) > 0:
+            xg_o_raw = sum(valid_away_goals) / len(valid_away_goals)
+            xg_o = (xg_o_raw * len(valid_away_goals) + media_ospiti * 3) / (
+                len(valid_away_goals) + 3
+            )
+          else:
+            xg_o = media_ospiti
 
           prob_1, prob_x, prob_2 = 0, 0, 0
           prob_over15, prob_over25 = 0, 0
@@ -295,7 +298,23 @@ with tab1:
           stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
           diff_forza = abs(xg_c - xg_o)
           stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
-          prob_rigore_si = min(0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05))
+          prob_rigore_si = min(0.50, max(0.22, 0.25 + (xg_c + xg_o) * 0.04))
+
+          # Funzione di clipping per evitare percentuali irrealistiche al 100% o allo 0%
+          def clamp(val):
+            return min(0.95, max(0.05, val))
+
+          prob_1 = clamp(prob_1)
+          prob_x = clamp(prob_x)
+          prob_2 = clamp(prob_2)
+          prob_over15 = clamp(prob_over15)
+          prob_under15 = clamp(prob_under15)
+          prob_over25 = clamp(prob_over25)
+          prob_under25 = clamp(prob_under25)
+          prob_gol = clamp(prob_gol)
+          prob_nogol = clamp(prob_nogol)
+          prob_gol_1t = clamp(prob_gol_1t)
+          prob_rigore_si = clamp(prob_rigore_si)
 
           lista_marcatori_casa = marcatori_per_squadra.get(casa, [])
           marcatore_c_str = (
@@ -376,7 +395,7 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Storico di {num_stagioni} stagioni caricate)!"
+            f" {selezionato['nome']} con correzione probabilistica avanzata!"
         )
         st.rerun()
       else:
@@ -542,7 +561,7 @@ with tab2:
 with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
-      "Questa applicazione utilizza modelli statistici basati sulla"
-      " **Distribuzione di Poisson** e sullo storico multi-stagione (fino a 5"
-      " anni) per l'analisi predittiva dei match."
+      "Questa applicazione utilizza modelli statistici avanzati (Poisson con"
+      " Laplace/Bayesian Smoothing e clipping delle percentuali) per l'analisi"
+      " predittiva dei match su un orizzonte fino a 5 anni."
   )
