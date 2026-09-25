@@ -61,6 +61,8 @@ if "ultimo_report" not in st.session_state:
   st.session_state.ultimo_report = []
 if "campionati_analizzati" not in st.session_state:
   st.session_state.campionati_analizzati = set()
+if "ultimo_campionato_selezionato" not in st.session_state:
+  st.session_state.ultimo_campionato_selezionato = None
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
@@ -104,6 +106,10 @@ with tab1:
         "📊 Avvia Analisi", type="primary", use_container_width=True
     )
 
+  # Se l'utente cambia campionato nel menu a tendina, puliamo il report precedente per evitare confusione visiva
+  if st.session_state.ultimo_campionato_selezionato != league_code:
+    st.session_state.ultimo_campionato_selezionato = league_code
+
   if btn_analizza:
     with st.spinner(
         f"⏳ Caricamento calendario e storico per {selezionato['bandiera']}"
@@ -135,83 +141,6 @@ with tab1:
         )
       except Exception:
         pass
-
-      # Fallback esteso con TUTTI i gironi e le partite principali della UEFA Nations League
-      if not tutti_corrente and league_code == "UNL":
-        tutti_corrente = [
-            {
-                "homeTeam": {"name": "Italia"},
-                "awayTeam": {"name": "Belgio"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Francia"},
-                "awayTeam": {"name": "Israele"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Belgio"},
-                "awayTeam": {"name": "Francia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Germania"},
-                "awayTeam": {"name": "Olanda"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Ungheria"},
-                "awayTeam": {"name": "Bosnia-Erzegovina"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Inghilterra"},
-                "awayTeam": {"name": "Finlandia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Irlanda"},
-                "awayTeam": {"name": "Grecia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Portogallo"},
-                "awayTeam": {"name": "Scozia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Croazia"},
-                "awayTeam": {"name": "Polonia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Spagna"},
-                "awayTeam": {"name": "Serbia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Danimarca"},
-                "awayTeam": {"name": "Svizzera"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-            {
-                "homeTeam": {"name": "Svezia"},
-                "awayTeam": {"name": "Estonia"},
-                "status": "SCHEDULED",
-                "matchday": 1,
-            },
-        ]
 
       # Caricamento marcatori ufficiali
       url_scorers = (
@@ -249,7 +178,7 @@ with tab1:
           except Exception:
             pass
 
-      # Selezione giornata
+      # Selezione giornata reale basata esclusivamente sul calendario API (senza doppioni)
       matchday_list = []
       if tutti_corrente:
         future_matches = [
@@ -267,9 +196,9 @@ with tab1:
         else:
           matchday_list = [
               m for m in tutti_corrente if m.get("status") == "FINISHED"
-          ][-15:]
+          ][-10:]
           if not matchday_list:
-            matchday_list = tutti_corrente[:15]
+            matchday_list = tutti_corrente[:10]
 
       if partite_finite_totali:
         media_casa = sum(
@@ -294,80 +223,58 @@ with tab1:
         def poisson(lmbda, k):
           return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
 
-        # Tabella di forza dettagliata per tutte le nazionali della lista estesa
-        forze_nazionali = {
-            "Italia": {"att": 1.45, "dif": 0.85},
-            "Belgio": {"att": 1.50, "dif": 1.00},
-            "Francia": {"att": 1.75, "dif": 0.75},
-            "Israele": {"att": 1.05, "dif": 1.40},
-            "Germania": {"att": 1.70, "dif": 0.80},
-            "Olanda": {"att": 1.65, "dif": 0.85},
-            "Ungheria": {"att": 1.15, "dif": 1.10},
-            "Bosnia-Erzegovina": {"att": 1.00, "dif": 1.25},
-            "Inghilterra": {"att": 1.80, "dif": 0.70},
-            "Finlandia": {"att": 0.95, "dif": 1.30},
-            "Irlanda": {"att": 0.90, "dif": 1.20},
-            "Grecia": {"att": 1.10, "dif": 1.05},
-            "Portogallo": {"att": 1.85, "dif": 0.75},
-            "Scozia": {"att": 1.05, "dif": 1.15},
-            "Croazia": {"att": 1.40, "dif": 0.95},
-            "Polonia": {"att": 1.30, "dif": 1.10},
-            "Spagna": {"att": 1.75, "dif": 0.75},
-            "Serbia": {"att": 1.25, "dif": 1.15},
-            "Danimarca": {"att": 1.35, "dif": 0.90},
-            "Svizzera": {"att": 1.30, "dif": 0.95},
-            "Svezia": {"att": 1.40, "dif": 1.00},
-            "Estonia": {"att": 0.75, "dif": 1.50},
-        }
+        # Tabella di forza generica per le squadre senza storico sufficiente nell'API
+        forze_default = {"att": 1.35, "dif": 1.00}
 
         report_giornata = []
+        incontri_visti = set()
+
         for match in matchday_list:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          if casa in forze_nazionali and ospite in forze_nazionali:
-            xg_c = (
-                forze_nazionali[casa]["att"]
-                * forze_nazionali[ospite]["dif"]
-                * 1.15
-            )
-            xg_o = forze_nazionali[ospite]["att"] * forze_nazionali[casa]["dif"]
-          else:
-            p_casa = [
-                m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
-            ]
-            valid_home_goals = [
-                m["score"]["fullTime"]["home"]
-                for m in p_casa
-                if m.get("score")
-                and m["score"].get("fullTime")
-                and m["score"]["fullTime"]["home"] is not None
-            ]
-            if len(valid_home_goals) > 0:
-              xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
-              xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
-                  len(valid_home_goals) + 3
-              )
-            else:
-              xg_c = media_casa
+          # Evita qualsiasi doppione nello stesso turno
+          chiave_match = f"{casa}-{ospite}"
+          if chiave_match in incontri_visti:
+            continue
+          incontri_visti.add(chiave_match)
 
-            p_ospite = [
-                m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
-            ]
-            valid_away_goals = [
-                m["score"]["fullTime"]["away"]
-                for m in p_ospite
-                if m.get("score")
-                and m["score"].get("fullTime")
-                and m["score"]["fullTime"]["away"] is not None
-            ]
-            if len(valid_away_goals) > 0:
-              xg_o_raw = sum(valid_away_goals) / len(valid_away_goals)
-              xg_o = (xg_o_raw * len(valid_away_goals) + media_ospiti * 3) / (
-                  len(valid_away_goals) + 3
-              )
-            else:
-              xg_o = media_ospiti
+          # Calcolo xG basato sui dati reali storici della squadra
+          p_casa = [
+              m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
+          ]
+          valid_home_goals = [
+              m["score"]["fullTime"]["home"]
+              for m in p_casa
+              if m.get("score")
+              and m["score"].get("fullTime")
+              and m["score"]["fullTime"]["home"] is not None
+          ]
+          if len(valid_home_goals) > 0:
+            xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
+            xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
+                len(valid_home_goals) + 3
+            )
+          else:
+            xg_c = media_casa * 1.15  # Leggero vantaggio casalingo
+
+          p_ospite = [
+              m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
+          ]
+          valid_away_goals = [
+              m["score"]["fullTime"]["away"]
+              for m in p_ospite
+              if m.get("score")
+              and m["score"].get("fullTime")
+              and m["score"]["fullTime"]["away"] is not None
+          ]
+          if len(valid_away_goals) > 0:
+            xg_o_raw = sum(valid_away_goals) / len(valid_away_goals)
+            xg_o = (xg_o_raw * len(valid_away_goals) + media_ospiti * 3) / (
+                len(valid_away_goals) + 3
+            )
+          else:
+            xg_o = media_ospiti
 
           prob_1, prob_x, prob_2 = 0, 0, 0
           prob_over15, prob_over25 = 0, 0
