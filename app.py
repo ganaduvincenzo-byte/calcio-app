@@ -35,6 +35,7 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
+# Aggiunte Europa League, Conference League e competizioni per Nazionali
 campionati = {
     "SA": {"nome": "Campionato Italiano (Serie A)", "bandiera": "🇮🇹"},
     "PL": {"nome": "Campionato Inglese (Premier League)", "bandiera": "🇬🇧"},
@@ -42,6 +43,11 @@ campionati = {
     "BL1": {"nome": "Campionato Tedesco (Bundesliga)", "bandiera": "🇩🇪"},
     "FL1": {"nome": "Campionato Francese (Ligue 1)", "bandiera": "🇫🇷"},
     "CL": {"nome": "UEFA Champions League", "bandiera": "🇪🇺"},
+    "EL": {"nome": "UEFA Europa League", "bandiera": "🇪🇺"},
+    "ECL": {"nome": "UEFA Conference League", "bandiera": "🇪🇺"},
+    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎"},
+    "UNL": {"nome": "UEFA Nations League", "bandiera": "🏆"},
+    "EC": {"nome": "Qualificazioni Europei / Mondiali", "bandiera": "⚽"},
 }
 
 st.title("⚽ Centro Analisi Calcio Pro")
@@ -65,7 +71,7 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 with tab1:
-  st.subheader("🌍 Seleziona e Analizza il Turno di Campionato")
+  st.subheader("🌍 Seleziona e Analizza il Turno di Campionato / Coppe")
 
   col1, col2, col3 = st.columns([2, 1, 1])
   with col1:
@@ -75,7 +81,7 @@ with tab1:
       camp_options.append((code, f"{prefix}{c['bandiera']} {c['nome']}"))
 
     league_code = st.selectbox(
-        "Campionato:",
+        "Campionato / Competizione:",
         options=[opt[0] for opt in camp_options],
         format_func=lambda x: next(opt[1] for opt in camp_options if opt[0] == x),
     )
@@ -192,7 +198,7 @@ with tab1:
           if not matchday_list:
             matchday_list = tutti_corrente[:10]
 
-      # Calcolo medie gol generali del campionato
+      # Calcolo medie gol generali del campionato/competizione
       if partite_finite_totali:
         media_casa = sum(
             m["score"]["fullTime"]["home"]
@@ -300,7 +306,6 @@ with tab1:
           stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
           prob_rigore_si = min(0.50, max(0.22, 0.25 + (xg_c + xg_o) * 0.04))
 
-          # Probabilità stimate per i Corner e i Cartellini (basate sulle medie calcolate)
           prob_over85_corner = min(
               0.88, max(0.35, 0.50 + (stimacorner - 9.0) * 0.08)
           )
@@ -311,7 +316,6 @@ with tab1:
           )
           prob_under45_cartellini = 1.0 - prob_over35_cartellini
 
-          # Funzione di clipping per evitare percentuali estreme
           def clamp(val):
             return min(0.95, max(0.05, val))
 
@@ -361,7 +365,7 @@ with tab1:
               {"mercato": "Under 1.5", "prob": prob_under15},
               {"mercato": "Over 2.5", "prob": prob_over25},
               {"mercato": "Under 2.5", "prob": prob_under25},
-              {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
+              {"mercato": "Gol", "prob": prob_gol},
               {"mercato": "No Gol", "prob": prob_nogol},
               {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
               {"mercato": "Rigore Sì", "prob": prob_rigore_si},
@@ -420,11 +424,11 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} con mercati estesi (Corner e Cartellini)!"
+            f" {selezionato['nome']}!"
         )
         st.rerun()
       else:
-        st.warning("⚠️ L'API non ha restituito incontri per questo campionato.")
+        st.warning("⚠️ L'API non ha restituito incontri per questa competizione.")
 
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
@@ -443,12 +447,12 @@ with tab2:
 
   with col_s1:
     tipo_schedina = st.selectbox(
-        "Seleziona ambito campionati:",
+        "Seleziona ambito competizioni:",
         options=["misti", "singolo"],
         format_func=lambda x: (
-            "🌍 Tutti i Campionati Analizzati"
+            "🌍 Tutte le Competizioni Analizzate"
             if x == "misti"
-            else "⭐ Campionato Singolo"
+            else "⭐ Competizione Singola"
         ),
     )
 
@@ -456,7 +460,7 @@ with tab2:
   if tipo_schedina == "singolo":
     with col_s2:
       schedina_code = st.selectbox(
-          "Scegli campionato:",
+          "Scegli competizione:",
           options=[opt[0] for opt in camp_options],
           format_func=lambda x: next(
               opt[1] for opt in camp_options if opt[0] == x
@@ -493,7 +497,7 @@ with tab2:
   if st.button("🚀 Genera Schedina Personalizzata", type="primary"):
     if not st.session_state.archivio_partite_globali:
       st.warning(
-          "⚠️ Analizza prima almeno un campionato nella scheda precedente!"
+          "⚠️ Analizza prima almeno una competizione nella scheda precedente!"
       )
     else:
       pool = st.session_state.archivio_partite_globali
@@ -524,7 +528,7 @@ with tab2:
               ):
                 Includi = True
               if "Gol / No Gol" in opzioni_mercato and (
-                  "Gol (Entrambe segnano)" in nome_m or "No Gol" in nome_m
+                  nome_m in ["Gol", "No Gol"]
               ):
                 Includi = True
               if "Gol 1° Tempo" in opzioni_mercato and "Gol 1°T" in nome_m:
@@ -579,7 +583,7 @@ with tab2:
                     <thead>
                         <tr style="background-color: #f1f2f6; text-align: left;">
                             <th style="padding: 8px;">N°</th>
-                            <th style="padding: 8px;">Campionato</th>
+                            <th style="padding: 8px;">Competizione</th>
                             <th style="padding: 8px;">Incontro</th>
                             <th style="padding: 8px;">Pronostico Selezionato</th>
                         </tr>
