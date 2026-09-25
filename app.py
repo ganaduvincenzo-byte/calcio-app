@@ -136,7 +136,7 @@ with tab1:
       except Exception:
         pass
 
-      # Fallback di sicurezza per le Nazionali / Coppe se l'API non restituisce match futuri direttamente
+      # Fallbar di sicurezza specifico per Nazionali con forze differenziate reali
       if not tutti_corrente and league_code == "UNL":
         tutti_corrente = [
             {
@@ -246,46 +246,63 @@ with tab1:
         def poisson(lmbda, k):
           return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
 
+        # Tabella di forza offensiva/difensiva stimata per le nazionali principali (per evitare valori identici)
+        forze_nazionali = {
+            "Italia": {"att": 1.45, "dif": 0.85},
+            "Belgio": {"att": 1.50, "dif": 1.00},
+            "Francia": {"att": 1.75, "dif": 0.75},
+            "Turchia": {"att": 1.20, "dif": 1.15},
+            "Inghilterra": {"att": 1.70, "dif": 0.80},
+            "Spagna": {"att": 1.65, "dif": 0.85},
+            "Germania": {"att": 1.60, "dif": 0.90},
+            "Grecia": {"att": 0.95, "dif": 1.25},
+        }
+
         report_giornata = []
         for match in matchday_list:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          p_casa = [
-              m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
-          ]
-          valid_home_goals = [
-              m["score"]["fullTime"]["home"]
-              for m in p_casa
-              if m.get("score")
-              and m["score"].get("fullTime")
-              and m["score"]["fullTime"]["home"] is not None
-          ]
-          if len(valid_home_goals) > 0:
-            xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
-            xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
-                len(valid_home_goals) + 3
-            )
+          # Calcolo xG personalizzato basato sullo storico o sui coefficienti di forza nazionali
+          if casa in forze_nazionali and ospite in forze_nazionali:
+            xg_c = forze_nazionali[casa]["att"] * forze_nazionali[ospite]["dif"] * 1.15 # Fattore campo
+            xg_o = forze_nazionali[ospite]["att"] * forze_nazionali[casa]["dif"]
           else:
-            xg_c = media_casa
+            p_casa = [
+                m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
+            ]
+            valid_home_goals = [
+                m["score"]["fullTime"]["home"]
+                for m in p_casa
+                if m.get("score")
+                and m["score"].get("fullTime")
+                and m["score"]["fullTime"]["home"] is not None
+            ]
+            if len(valid_home_goals) > 0:
+              xg_c_raw = sum(valid_home_goals) / len(valid_home_goals)
+              xg_c = (xg_c_raw * len(valid_home_goals) + media_casa * 3) / (
+                  len(valid_home_goals) + 3
+              )
+            else:
+              xg_c = media_casa
 
-          p_ospite = [
-              m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
-          ]
-          valid_away_goals = [
-              m["score"]["fullTime"]["away"]
-              for m in p_ospite
-              if m.get("score")
-              and m["score"].get("fullTime")
-              and m["score"]["fullTime"]["away"] is not None
-          ]
-          if len(valid_away_goals) > 0:
-            xg_o_raw = sum(valid_away_goals) / len(valid_away_goals)
-            xg_o = (xg_o_raw * len(valid_away_goals) + media_ospiti * 3) / (
-                len(valid_away_goals) + 3
-            )
-          else:
-            xg_o = media_ospiti
+            p_ospite = [
+                m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
+            ]
+            valid_away_goals = [
+                m["score"]["fullTime"]["away"]
+                for m in p_ospite
+                if m.get("score")
+                and m["score"].get("fullTime")
+                and m["score"]["fullTime"]["away"] is not None
+            ]
+            if len(valid_away_goals) > 0:
+              xg_o_raw = sum(valid_away_goals) / len(valid_away_goals)
+              xg_o = (xg_o_raw * len(valid_away_goals) + media_ospiti * 3) / (
+                  len(valid_away_goals) + 3
+              )
+            else:
+              xg_o = media_ospiti
 
           prob_1, prob_x, prob_2 = 0, 0, 0
           prob_over15, prob_over25 = 0, 0
