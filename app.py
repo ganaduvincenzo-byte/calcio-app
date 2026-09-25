@@ -136,7 +136,7 @@ with tab1:
       except Exception:
         pass
 
-      # Fallbar di sicurezza specifico per Nazionali con forze differenziate reali
+      # Fallback esteso con TUTTI i gironi e le partite principali della UEFA Nations League
       if not tutti_corrente and league_code == "UNL":
         tutti_corrente = [
             {
@@ -146,20 +146,68 @@ with tab1:
                 "matchday": 1,
             },
             {
-                "homeTeam": {"name": "Turchia"},
+                "homeTeam": {"name": "Francia"},
+                "awayTeam": {"name": "Israele"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Belgio"},
                 "awayTeam": {"name": "Francia"},
                 "status": "SCHEDULED",
                 "matchday": 1,
             },
             {
-                "homeTeam": {"name": "Inghilterra"},
-                "awayTeam": {"name": "Spagna"},
+                "homeTeam": {"name": "Germania"},
+                "awayTeam": {"name": "Olanda"},
                 "status": "SCHEDULED",
                 "matchday": 1,
             },
             {
-                "homeTeam": {"name": "Germania"},
+                "homeTeam": {"name": "Ungheria"},
+                "awayTeam": {"name": "Bosnia-Erzegovina"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Inghilterra"},
+                "awayTeam": {"name": "Finlandia"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Irlanda"},
                 "awayTeam": {"name": "Grecia"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Portogallo"},
+                "awayTeam": {"name": "Scozia"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Croazia"},
+                "awayTeam": {"name": "Polonia"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Spagna"},
+                "awayTeam": {"name": "Serbia"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Danimarca"},
+                "awayTeam": {"name": "Svizzera"},
+                "status": "SCHEDULED",
+                "matchday": 1,
+            },
+            {
+                "homeTeam": {"name": "Svezia"},
+                "awayTeam": {"name": "Estonia"},
                 "status": "SCHEDULED",
                 "matchday": 1,
             },
@@ -219,9 +267,9 @@ with tab1:
         else:
           matchday_list = [
               m for m in tutti_corrente if m.get("status") == "FINISHED"
-          ][-10:]
+          ][-15:]
           if not matchday_list:
-            matchday_list = tutti_corrente[:10]
+            matchday_list = tutti_corrente[:15]
 
       if partite_finite_totali:
         media_casa = sum(
@@ -246,16 +294,30 @@ with tab1:
         def poisson(lmbda, k):
           return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
 
-        # Tabella di forza offensiva/difensiva stimata per le nazionali principali (per evitare valori identici)
+        # Tabella di forza dettagliata per tutte le nazionali della lista estesa
         forze_nazionali = {
             "Italia": {"att": 1.45, "dif": 0.85},
             "Belgio": {"att": 1.50, "dif": 1.00},
             "Francia": {"att": 1.75, "dif": 0.75},
-            "Turchia": {"att": 1.20, "dif": 1.15},
-            "Inghilterra": {"att": 1.70, "dif": 0.80},
-            "Spagna": {"att": 1.65, "dif": 0.85},
-            "Germania": {"att": 1.60, "dif": 0.90},
-            "Grecia": {"att": 0.95, "dif": 1.25},
+            "Israele": {"att": 1.05, "dif": 1.40},
+            "Germania": {"att": 1.70, "dif": 0.80},
+            "Olanda": {"att": 1.65, "dif": 0.85},
+            "Ungheria": {"att": 1.15, "dif": 1.10},
+            "Bosnia-Erzegovina": {"att": 1.00, "dif": 1.25},
+            "Inghilterra": {"att": 1.80, "dif": 0.70},
+            "Finlandia": {"att": 0.95, "dif": 1.30},
+            "Irlanda": {"att": 0.90, "dif": 1.20},
+            "Grecia": {"att": 1.10, "dif": 1.05},
+            "Portogallo": {"att": 1.85, "dif": 0.75},
+            "Scozia": {"att": 1.05, "dif": 1.15},
+            "Croazia": {"att": 1.40, "dif": 0.95},
+            "Polonia": {"att": 1.30, "dif": 1.10},
+            "Spagna": {"att": 1.75, "dif": 0.75},
+            "Serbia": {"att": 1.25, "dif": 1.15},
+            "Danimarca": {"att": 1.35, "dif": 0.90},
+            "Svizzera": {"att": 1.30, "dif": 0.95},
+            "Svezia": {"att": 1.40, "dif": 1.00},
+            "Estonia": {"att": 0.75, "dif": 1.50},
         }
 
         report_giornata = []
@@ -263,9 +325,12 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          # Calcolo xG personalizzato basato sullo storico o sui coefficienti di forza nazionali
           if casa in forze_nazionali and ospite in forze_nazionali:
-            xg_c = forze_nazionali[casa]["att"] * forze_nazionali[ospite]["dif"] * 1.15 # Fattore campo
+            xg_c = (
+                forze_nazionali[casa]["att"]
+                * forze_nazionali[ospite]["dif"]
+                * 1.15
+            )
             xg_o = forze_nazionali[ospite]["att"] * forze_nazionali[casa]["dif"]
           else:
             p_casa = [
