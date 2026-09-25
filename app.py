@@ -105,9 +105,9 @@ with tab1:
         f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
       partite_finite_totali = []
-      partite_future = []
+      tutti_corrente = []
 
-      # 1. Chiamata principale per il calendario corrente (partite finite e future)
+      # 1. Caricamento di tutte le partite della stagione corrente
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
@@ -119,11 +119,6 @@ with tab1:
           partite_finite_totali.extend(
               [m for m in tutti_corrente if m.get("status") == "FINISHED"]
           )
-          partite_future = [
-              m
-              for m in tutti_corrente
-              if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
-          ]
       except Exception:
         pass
 
@@ -146,21 +141,30 @@ with tab1:
           except Exception:
             pass
 
-      # 3. Selezione della prima giornata futura disponibile (anche se lontana nel tempo)
+      # 3. Selezione intelligente della giornata (Prende la prima giornata futura o la prima utile)
       matchday_list = []
-      if len(partite_future) > 0:
-        # Ordiniamo per data o prendiamo il primo matchday disponibile con partite programmate
-        partite_future_ordinate = sorted(
-            partite_future, key=lambda x: x.get("utcDate", "")
-        )
-        prima_data_futura = partite_future_ordinate[0].get("matchday")
-        matchday_list = [
+      if tutti_corrente:
+        # Cerca la prima partita non ancora giocata (SCHEDULED, TIMED, LIVE)
+        future_matches = [
             m
-            for m in partite_future_ordinate
-            if m.get("matchday") == prima_data_futura
+            for m in tutti_corrente
+            if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
         ]
-        if not matchday_list:
-          matchday_list = partite_future_ordinate[:10]
+        if future_matches:
+          # Prende il matchday della primissima partita futura disponibile
+          primo_matchday_futuro = future_matches[0].get("matchday")
+          matchday_list = [
+              m
+              for m in tutti_corrente
+              if m.get("matchday") == primo_matchday_futuro
+          ]
+        else:
+          # Fallback: se non ci sono match futuri etichettati, prende l'ultima giornata o le prime 10 disponibili
+          matchday_list = [
+              m for m in tutti_corrente if m.get("status") == "FINISHED"
+          ][-10:]
+          if not matchday_list:
+            matchday_list = tutti_corrente[:10]
 
       # Calcolo medie gol complessive dallo storico unito
       if partite_finite_totali:
@@ -187,7 +191,7 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          # Statistiche storiche specifiche della squadra di casa (su tutte le stagioni caricate)
+          # Statistiche storiche specifiche della squadra di casa
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -202,7 +206,7 @@ with tab1:
               else media_casa
           )
 
-          # Statistiche storiche specifiche della squadra ospite (su tutte le stagioni caricate)
+          # Statistiche storiche specifiche della squadra ospite
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
           ]
@@ -334,14 +338,13 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Trovata Giornata N. {matchday_list[0].get('matchday')} con"
-            f" {len(matchday_list)} partite, analizzate usando"
-            f" {len(partite_finite_totali)} incontri storici totali)!"
+            f" {selezionato['nome']} (Giornata N. {matchday_list[0].get('matchday')} con"
+            f" {len(matchday_list)} partite caricate con successo)!"
         )
         st.rerun()
       else:
         st.warning(
-            "⚠️ Nessuna giornata futura trovata per questo campionato."
+            "⚠️ Impossibile recuperare le partite per questo campionato."
         )
 
   if st.session_state.get("ultimo_report"):
@@ -504,7 +507,7 @@ with tab2:
 with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
-      "Cette application utilise des modèles statistiques avancés basés sur"
-      " la **Distribution de Poisson** et l'analyse historique pluriannuelle"
-      " pour estimer les résultats."
+      "Questa applicazione utilizza modelli statistici basati sulla"
+      " **Distribuzione di Poisson** e sullo storico multi-stagione per"
+      " l'analisi predittiva dei match."
   )
