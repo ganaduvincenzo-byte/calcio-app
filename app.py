@@ -1,5 +1,6 @@
 import datetime
 import math
+import random
 import pandas as pd
 import requests
 import streamlit as st
@@ -162,7 +163,7 @@ with tab1:
           except Exception:
             pass
 
-      # Caricamento marcatori basato su ID squadra (robusto e senza errori di nome)
+      # Caricamento marcatori basato su ID squadra
       url_scorers = (
           f"https://api.football-data.org/v4/competitions/{league_code}/scorers"
       )
@@ -180,7 +181,6 @@ with tab1:
       except Exception:
         pass
 
-      # Filtraggio rigoroso delle sole partite future reali
       matchday_list = []
       if tutti_corrente:
         ora_attuale = datetime.datetime.utcnow()
@@ -367,7 +367,6 @@ with tab1:
           prob_over35_cartellini = clamp(prob_over35_cartellini)
           prob_under45_cartellini = clamp(prob_under45_cartellini)
 
-          # Recupero marcatori reali tramite ID squadra
           lista_marcatori_casa = marcatori_per_squadra.get(home_id, [])
           marcatore_c_str = (
               lista_marcatori_casa[0]
@@ -463,8 +462,7 @@ with tab1:
       else:
         st.warning(
             "⚠️ Al momento non ci sono partite future programmate per questa"
-            " competizione nel calendario ufficiale dell'API (o il piano"
-            " gratuito non copre le date odierne per questo torneo)."
+            " competizione nel calendario ufficiale dell'API."
         )
 
   if st.session_state.get("ultimo_report"):
@@ -490,17 +488,16 @@ with tab2:
     with col_s1:
       num_eventi = st.slider("Numero di eventi in schedina:", 1, 10, 3)
     with col_s2:
-      quota_min = st.number_input("Quota minima per evento:", 1.10, 3.00, 1.30)
+      quota_min = st.number_input("Quota minima per evento:", 1.05, 3.00, 1.20)
     with col_s3:
       budget = st.number_input("Budget puntata (€):", 1.00, 1000.00, 10.00)
 
     if st.button("🎲 Genera Schedina Vincente", type="primary"):
       partite_disponibili = list(st.session_state.archivio_partite_globali)
-      import random
-
       random.shuffle(partite_disponibili)
 
       selezioni_schedina = []
+      # Primo tentativo filtrando per quota minima
       for p in partite_disponibili:
         if len(selezioni_schedina) >= num_eventi:
           break
@@ -511,6 +508,27 @@ with tab2:
         )
 
         if quota_stimata >= quota_min:
+          selezioni_schedina.append({
+              "Incontro": p["Incontro"],
+              "Data e Ora": p["📅 Data e Ora"],
+              "Pronostico": mercato_top,
+              "Probabilità": f"{prob_top * 100:.1f}%",
+              "Quota Stimata": quota_stimata,
+          })
+
+      # Se non bastano, prendiamo anche le altre partite disponibili senza bloccarci sulla quota minima
+      if len(selezioni_schedina) < num_eventi:
+        for p in partite_disponibili:
+          if len(selezioni_schedina) >= num_eventi:
+            break
+          # Evita duplicati di incontri già inseriti
+          if any(s["Incontro"] == p["Incontro"] for s in selezioni_schedina):
+            continue
+          mercato_top = p["_miglior_mercato"]
+          prob_top = p["_miglior_prob"]
+          quota_stimata = round(
+              max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
+          )
           selezioni_schedina.append({
               "Incontro": p["Incontro"],
               "Data e Ora": p["📅 Data e Ora"],
@@ -535,8 +553,8 @@ with tab2:
         )
       else:
         st.warning(
-            "⚠️ Nessun evento soddisfa i filtri selezionati. Prova ad abbassare"
-            " la quota minima o ad analizzare altri campionati."
+            "⚠️ Nessun evento disponibile in memoria. Analizza prima qualche"
+            " campionato nella scheda 'Analisi Turno & Giocatori'."
         )
 
 with tab3:
@@ -544,7 +562,6 @@ with tab3:
   st.markdown("""
     Benvenuto nel **Centro Analisi Calcio Pro**. Questa applicazione ti permette di analizzare le partite ufficiali dei campionati supportati sfruttando modelli statistici avanzati (Poisson, stime di xG storiche, corner, cartellini e marcatori).
     
-    * **Tab 1 (Analisi Turno & Giocatori):** Scegli una delle competizioni ufficiali dell'API, seleziona la profondità storica desiderata (da 1 a 5 anni per calcoli più accurati) e clicca su *Avvia Analisi*.
-    * **Tab 2 (Schedina Vincente):** Configura i tuoi parametri e genera automaticamente una combinazione di scommesse basata sulle probabilità più alte calcolate dal sistema.
-    * **Competizioni Supportate:** Sono incluse tutte le competizioni del piano gratuito ufficiale di *football-data.org* (Premier League, Serie A, Liga, Bundesliga, Ligue 1, Champions League, Europa League, Eredivisie, Primeira Liga, Brasileirão, Copa Libertadores e Mondiali).
+    * **Tab 1 (Analisi Turno & Giocatori):** Scegli una delle competizioni ufficiali dell'API, seleziona la profondità storica desiderata e clicca su *Avvia Analisi*. Ricorda di analizzare più campionati per avere un archivio ricco di eventi da combinare!
+    * **Tab 2 (Schedina Vincente):** Configura i tuoi parametri e genera automaticamente una combinazione di scommesse basata sulle probabilità calcolate dal sistema.
     """)
