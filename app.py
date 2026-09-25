@@ -1,4 +1,3 @@
-import datetime
 import math
 import pandas as pd
 import requests
@@ -102,63 +101,53 @@ with tab1:
 
   if btn_analizza:
     with st.spinner(
-        f"⏳ Raccolta dati storici ({num_stagioni} stagioni) per"
+        f"⏳ Caricamento calendario e storico ({num_stagioni} stagioni) per"
         f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
-      # Determina l'anno di inizio stagione corrente in base al mese (es. se siamo da luglio in poi, la stagione è iniziata quest'anno, altrimenti l'anno scorso)
-      oggi = datetime.date.today()
-      anno_corrente = (
-          oggi.year if oggi.month >= 7 else oggi.year - 1
-      )  # Es. Settembre 2026 -> stagione 2026
-
       partite_finite_totali = []
       partite_future = []
 
-      for i in range(num_stagioni):
-        anno_stagione = anno_corrente - i
-        url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_stagione}"
-        try:
-          resp_season = requests.get(url_season, headers=headers)
-          if resp_season.status_code == 200:
-            d_season = resp_season.json()
-            m_fin = [
-                m
-                for m in d_season.get("matches", [])
-                if m.get("status") == "FINISHED"
-            ]
-            partite_finite_totali.extend(m_fin)
+      # 1. Chiamata principale per prendere le partite correnti (future e finite di quest'anno)
+      url_base = (
+          f"https://api.football-data.org/v4/competitions/{league_code}/matches"
+      )
+      try:
+        resp_base = requests.get(url_base, headers=headers)
+        if resp_base.status_code == 200:
+          data_base = resp_base.json()
+          tutti_corrente = data_base.get("matches", [])
+          partite_finite_totali.extend(
+              [m for m in tutti_corrente if m.get("status") == "FINISHED"]
+          )
+          partite_future = [
+              m
+              for m in tutti_corrente
+              if m.get("status") in ["TIMED", "SCHEDULED"]
+          ]
+      except Exception:
+        pass
 
-            if i == 0:
-              partite_future = [
+      # 2. Se l'utente ha chiesto più stagioni, peschiamo anche gli anni precedenti (es. 2024, 2023)
+      if num_stagioni > 1:
+        # Anni di riferimento passati (partendo dall'anno scorso indietro)
+        anni_passati = [2025, 2024, 2023]
+        for idx in range(num_stagioni - 1):
+          anno_p = anni_passati[idx]
+          url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}"
+          try:
+            resp_season = requests.get(url_season, headers=headers)
+            if resp_season.status_code == 200:
+              d_season = resp_season.json()
+              m_fin_passate = [
                   m
                   for m in d_season.get("matches", [])
-                  if m.get("status") in ["TIMED", "SCHEDULED"]
+                  if m.get("status") == "FINISHED"
               ]
-        except Exception:
-          pass
+              partite_finite_totali.extend(m_fin_passate)
+          except Exception:
+            pass
 
-      # Fallback generale senza parametro di stagione se l'API non risponde correttamente con l'anno
-      if not partite_finite_totali and not partite_future:
-        url_matches = (
-            f"https://api.football-data.org/v4/competitions/{league_code}/matches"
-        )
-        try:
-          response = requests.get(url_matches, headers=headers)
-          if response.status_code == 200:
-            data = response.json()
-            partite_finite_totali = [
-                m
-                for m in data.get("matches", [])
-                if m.get("status") == "FINISHED"
-            ]
-            partite_future = [
-                m
-                for m in data.get("matches", [])
-                if m.get("status") in ["TIMED", "SCHEDULED"]
-            ]
-        except Exception as e:
-          st.error(f"⚠️ Errore di connessione API: {e}")
-
+      # Calcolo medie gol complessive dallo storico unito
       if partite_finite_totali:
         media_casa = sum(
             m["score"]["fullTime"]["home"] for m in partite_finite_totali
@@ -185,6 +174,7 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
+          # Statistiche storiche specifiche della squadra di casa (su tutte le stagioni caricate)
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -195,6 +185,7 @@ with tab1:
               else media_casa
           )
 
+          # Statistiche storiche specifiche della squadra ospite (su tutte le stagioni caricate)
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
           ]
@@ -321,15 +312,16 @@ with tab1:
         st.session_state.campionati_analizzati.add(league_code)
         st.session_state.ultimo_report = report_giornata
         st.success(
-            f"✅ Analisi multi-stagione completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Analizzate {len(partite_finite_totali)}"
-            f" partite storiche)!"
+            f"✅ Analisi completata per {selezionato['bandiera']}"
+            f" {selezionato['nome']} (Trovate {len(matchday_list)} partite in"
+            f" programma e analizzate {len(partite_finite_totali)} partite"
+            f" storiche totali)!"
         )
         st.rerun()
       else:
         st.warning(
-            "⚠️ Nessuna partita futura o dato storico trovato per questo"
-            " campionato in questo periodo."
+            "⚠️ Nessuna partita futura trovata per questo campionato in questo"
+            " momento."
         )
 
   if st.session_state.get("ultimo_report"):
