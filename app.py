@@ -54,7 +54,7 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con le immagini delle bandiere e i nomi scritti accanto
+# Elenco delle competizioni con bandiere per i campionati e coppe per i tornei internazionali
 campionati = {
     "PL": {
         "nome": "Premier League",
@@ -95,19 +95,15 @@ campionati = {
     "CL": {
         "nome": "Champions League",
         "etichetta": (
-            '<img'
-            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_UEFA_Champions_League_logo_2.svg/20px-The_UEFA_Champions_League_logo_2.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
-            " Champions League"
+            '<span style="font-size: 1.1rem; vertical-align: middle;'
+            ' margin-right: 6px;">🏆</span> Champions League'
         ),
     },
     "EL": {
         "nome": "Europa League",
         "etichetta": (
-            '<img'
-            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/UEFA_Europa_League_logo_%282021%29.svg/20px-UEFA_Europa_League_logo_%282021%29.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
-            " Europa League"
+            '<span style="font-size: 1.1rem; vertical-align: middle;'
+            ' margin-right: 6px;">🏆</span> Europa League'
         ),
     },
     "DED": {
@@ -134,17 +130,15 @@ campionati = {
     "CLI": {
         "nome": "Copa Libertadores",
         "etichetta": (
-            '<img'
-            ' src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Copa_Libertadores_logo_current.svg/20px-Copa_Libertadores_logo_current.svg.png"'
-            ' width="20" style="vertical-align: middle; margin-right: 8px;">'
-            " Copa Libertadores"
+            '<span style="font-size: 1.1rem; vertical-align: middle;'
+            ' margin-right: 6px;">🏆</span> Copa Libertadores'
         ),
     },
     "WC": {
         "nome": "World Cup",
         "etichetta": (
-            '<img src="https://flagcdn.com/w20/un.png" width="20"'
-            ' style="vertical-align: middle; margin-right: 8px;"> World Cup'
+            '<span style="font-size: 1.1rem; vertical-align: middle;'
+            ' margin-right: 6px;">🏆</span> World Cup'
         ),
     },
 }
@@ -201,14 +195,12 @@ with tab1:
   for i, (code, info) in enumerate(campionati.items()):
     target_col = grid_cols[i % 3]
     with target_col:
-      # Riga combinata con checkbox e etichetta HTML (bandiera + nome campionato)
       is_checked = st.checkbox(
           info["nome"],
           value=code in st.session_state.leghe_selezionate_tab1,
           key=f"chk_t1_{code}",
           help=info["nome"],
       )
-      # Visualizziamo la bandiera e il nome formattati elegantemente subito sopra o affiancati
       st.markdown(
           f"""
             <div style="margin-top: -30px; margin-left: 28px; margin-bottom: 10px; pointer-events: none;">
@@ -793,6 +785,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona i campionati desiderati con le bandiere reali e i nomi ben visibili accanto, quindi avvia l'analisi.
-    * **Tab 2:** Scegli i campionati, i mercati preferiti, imposta il budget, indica la **Quota Totale Desiderata** e genera la schedina su misura.
+    * **Tab 1:** Seleziona i campionati con le relative bandiere e tornei internazionali con l'icona della coppa, quindi avvia l'analisi.
+    * **Tab 2:** Scegli i campionati, i mercati preferiti, imposta il budget e la **Quota Totale Desiderata** per generare la schedina.
     """)
