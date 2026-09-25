@@ -51,7 +51,7 @@ campionati = {
     "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
 }
 
-st.title("⚽ Viganà Analisi Calcio Pro")
+st.title("⚽ Viganà Analisi Calcio Pro ⚽")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
