@@ -1,3 +1,4 @@
+import datetime
 import math
 import pandas as pd
 import requests
@@ -46,7 +47,7 @@ campionati = {
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione, Risultato Esatto,"
-    " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori e marcatori."
+    " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori e marcatori reali."
 )
 st.markdown("---")
 
@@ -101,35 +102,62 @@ with tab1:
 
   if btn_analizza:
     with st.spinner(
-        f"⏳ Caricamento calendario e storico ({num_stagioni} stagioni) per"
+        f"⏳ Caricamento calendario, storico e marcatori per"
         f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
       partite_finite_totali = []
       tutti_corrente = []
+      marcatori_per_squadra = {}
 
-      # 1. Caricamento di tutte le partite della stagione corrente
+      anno_corrente = datetime.datetime.now().year
+
+      # 1. Caricamento partite stagione corrente
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
       try:
-        resp_base = requests.get(url_base, headers=headers)
+        resp_base = requests.get(url_base, headers=headers, timeout=10)
         if resp_base.status_code == 200:
           data_base = resp_base.json()
           tutti_corrente = data_base.get("matches", [])
-          partite_finite_totali.extend(
-              [m for m in tutti_corrente if m.get("status") == "FINISHED"]
-          )
+
+        if not tutti_corrente:
+          url_season_curr = f"{url_base}?season={anno_corrente}"
+          resp_curr = requests.get(url_season_curr, headers=headers, timeout=10)
+          if resp_curr.status_code == 200:
+            tutti_corrente = resp_curr.json().get("matches", [])
+
+        partite_finite_totali.extend(
+            [m for m in tutti_corrente if m.get("status") == "FINISHED"]
+        )
+      except Exception as e:
+        st.error(f"Errore di connessione API: {e}")
+
+      # 2. Caricamento marcatori ufficiali (Scorers) dalla competizione
+      url_scorers = (
+          f"https://api.football-data.org/v4/competitions/{league_code}/scorers"
+      )
+      try:
+        resp_sc = requests.get(url_scorers, headers=headers, timeout=10)
+        if resp_sc.status_code == 200:
+          data_sc = resp_sc.json()
+          for scorer in data_sc.get("scorers", []):
+            p_nome = scorer.get("player", {}).get("name", "Sconosciuto")
+            s_nome = scorer.get("team", {}).get("name", "")
+            if s_nome:
+              if s_nome not in marcatori_per_squadra:
+                marcatori_per_squadra[s_nome] = []
+              marcatori_per_squadra[s_nome].append(p_nome)
       except Exception:
         pass
 
-      # 2. Caricamento delle stagioni passate per lo storico (es. 2025, 2024)
+      # 3. Caricamento stagioni passate per lo storico
       if num_stagioni > 1:
-        anni_passati = [2025, 2024, 2023]
-        for idx in range(num_stagioni - 1):
-          anno_p = anni_passati[idx]
+        anni_passati = [anno_corrente - 1, anno_corrente - 2, anno_corrente - 3]
+        for anno_p in anni_passati:
           url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}"
           try:
-            resp_season = requests.get(url_season, headers=headers)
+            resp_season = requests.get(url_season, headers=headers, timeout=10)
             if resp_season.status_code == 200:
               d_season = resp_season.json()
               m_fin_passate = [
@@ -141,17 +169,15 @@ with tab1:
           except Exception:
             pass
 
-      # 3. Selezione intelligente della giornata (Prende la prima giornata futura o la prima utile)
+      # 4. Selezione intelligente della giornata
       matchday_list = []
       if tutti_corrente:
-        # Cerca la prima partita non ancora giocata (SCHEDULED, TIMED, LIVE)
         future_matches = [
             m
             for m in tutti_corrente
             if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
         ]
         if future_matches:
-          # Prende il matchday della primissima partita futura disponibile
           primo_matchday_futuro = future_matches[0].get("matchday")
           matchday_list = [
               m
@@ -159,24 +185,27 @@ with tab1:
               if m.get("matchday") == primo_matchday_futuro
           ]
         else:
-          # Fallback: se non ci sono match futuri etichettati, prende l'ultima giornata o le prime 10 disponibili
           matchday_list = [
               m for m in tutti_corrente if m.get("status") == "FINISHED"
           ][-10:]
           if not matchday_list:
             matchday_list = tutti_corrente[:10]
 
-      # Calcolo medie gol complessive dallo storico unito
+      # Calcolo medie gol
       if partite_finite_totali:
         media_casa = sum(
             m["score"]["fullTime"]["home"]
             for m in partite_finite_totali
-            if m["score"]["fullTime"]["home"] is not None
+            if m.get("score")
+            and m["score"].get("fullTime")
+            and m["score"]["fullTime"]["home"] is not None
         ) / max(1, len(partite_finite_totali))
         media_ospiti = sum(
             m["score"]["fullTime"]["away"]
             for m in partite_finite_totali
-            if m["score"]["fullTime"]["away"] is not None
+            if m.get("score")
+            and m["score"].get("fullTime")
+            and m["score"]["fullTime"]["away"] is not None
         ) / max(1, len(partite_finite_totali))
       else:
         media_casa, media_ospiti = 1.4, 1.1
@@ -191,14 +220,15 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          # Statistiche storiche specifiche della squadra di casa
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
           valid_home_goals = [
               m["score"]["fullTime"]["home"]
               for m in p_casa
-              if m["score"]["fullTime"]["home"] is not None
+              if m.get("score")
+              and m["score"].get("fullTime")
+              and m["score"]["fullTime"]["home"] is not None
           ]
           xg_c = (
               sum(valid_home_goals) / len(valid_home_goals)
@@ -206,14 +236,15 @@ with tab1:
               else media_casa
           )
 
-          # Statistiche storiche specifiche della squadra ospite
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
           ]
           valid_away_goals = [
               m["score"]["fullTime"]["away"]
               for m in p_ospite
-              if m["score"]["fullTime"]["away"] is not None
+              if m.get("score")
+              and m["score"].get("fullTime")
+              and m["score"]["fullTime"]["away"] is not None
           ]
           xg_o = (
               sum(valid_away_goals) / len(valid_away_goals)
@@ -263,16 +294,23 @@ with tab1:
           stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
           prob_rigore_si = min(0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05))
 
-          marcatore_casa = (
-              f"Top Attaccante ({casa})"
-              if xg_c > 1.3
-              else f"Esterno/Centrocampista ({casa})"
+          # Selezione del marcatore reale dalla lista dei marcatori della squadra
+          lista_marcatori_casa = marcatori_per_squadra.get(casa, [])
+          marcatore_c_str = (
+              lista_marcatori_casa[0]
+              if lista_marcatori_casa
+              else f"Attaccante ({casa})"
           )
-          marcatore_ospite = (
-              f"Top Attaccante ({ospite})"
-              if xg_o > 1.2
-              else f"Punta Centrale ({ospite})"
+
+          lista_marcatori_ospite = marcatori_per_squadra.get(ospite, [])
+          marcatore_o_str = (
+              lista_marcatori_ospite[0]
+              if lista_marcatori_ospite
+              else f"Attaccante ({ospite})"
           )
+
+          stringa_marcatori = f"⚽ {marcatore_c_str} / {marcatore_o_str}"
+
           rischio_ammonizione = (
               "Alto (Mediana aggressiva)"
               if stima_cartellini > 4.5
@@ -311,9 +349,7 @@ with tab1:
               "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
               "Corner": stimacorner,
               "Cartellini": stima_cartellini,
-              "🔍 Marcatore Probabile": (
-                  f"{marcatore_casa} / {marcatore_ospite}"
-              ),
+              "🔍 Marcatore Probabile": stringa_marcatori,
               "⚠️ Rischio Cartellini": rischio_ammonizione,
               "_miglior_mercato": miglior_scelta["mercato"],
               "_miglior_prob": miglior_scelta["prob"],
@@ -339,13 +375,11 @@ with tab1:
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
             f" {selezionato['nome']} (Giornata N. {matchday_list[0].get('matchday')} con"
-            f" {len(matchday_list)} partite caricate con successo)!"
+            f" marcatori reali caricati)!"
         )
         st.rerun()
       else:
-        st.warning(
-            "⚠️ Impossibile recuperare le partite per questo campionato."
-        )
+        st.warning("⚠️ L'API non ha restituito incontri per questo campionato.")
 
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
