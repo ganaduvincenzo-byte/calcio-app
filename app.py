@@ -46,7 +46,7 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale con analisi multi-stagione, Risultato Esatto,"
+    "Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto,"
     " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori e marcatori reali."
 )
 st.markdown("---")
@@ -82,9 +82,10 @@ with tab1:
   selezionato = campionati[league_code]
 
   with col2:
+    # Profondità storica ampliata fino a 5 anni
     num_stagioni = st.selectbox(
         "Profondità storica:",
-        options=[1, 2, 3],
+        options=[1, 2, 3, 4, 5],
         format_func=lambda x: (
             "Solo Stagione Corrente"
             if x == 1
@@ -102,8 +103,8 @@ with tab1:
 
   if btn_analizza:
     with st.spinner(
-        f"⏳ Caricamento calendario, storico e marcatori per"
-        f" {selezionato['bandiera']} {selezionato['nome']}..."
+        f"⏳ Caricamento calendario, storico ({num_stagioni} stagioni) e"
+        f" marcatori per {selezionato['bandiera']} {selezionato['nome']}..."
     ):
       partite_finite_totali = []
       tutti_corrente = []
@@ -151,9 +152,11 @@ with tab1:
       except Exception:
         pass
 
-      # 3. Caricamento stagioni passate per lo storico
+      # 3. Caricamento stagioni passate per lo storico (fino a 5 anni fa)
       if num_stagioni > 1:
-        anni_passati = [anno_corrente - 1, anno_corrente - 2, anno_corrente - 3]
+        anni_passati = [
+            anno_corrente - i for i in range(1, num_stagioni)
+        ]  # genera gli anni precedenti dinamicamente
         for anno_p in anni_passati:
           url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}"
           try:
@@ -294,7 +297,6 @@ with tab1:
           stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
           prob_rigore_si = min(0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05))
 
-          # Selezione del marcatore reale dalla lista dei marcatori della squadra
           lista_marcatori_casa = marcatori_per_squadra.get(casa, [])
           marcatore_c_str = (
               lista_marcatori_casa[0]
@@ -374,8 +376,7 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Giornata N. {matchday_list[0].get('matchday')} con"
-            f" marcatori reali caricati)!"
+            f" {selezionato['nome']} (Storico di {num_stagioni} stagioni caricate)!"
         )
         st.rerun()
       else:
@@ -542,6 +543,6 @@ with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
       "Questa applicazione utilizza modelli statistici basati sulla"
-      " **Distribuzione di Poisson** e sullo storico multi-stagione per"
-      " l'analisi predittiva dei match."
+      " **Distribuzione di Poisson** e sullo storico multi-stagione (fino a 5"
+      " anni) per l'analisi predittiva dei match."
   )
