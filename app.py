@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
-# Stili CSS avanzati per un look moderno e pulito
+# Stili CSS avanzati per un look moderno e pulito (come la prima versione)
 st.markdown(
     """
 <style>
@@ -36,7 +36,7 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco aggiornato ed esclusivo delle 12 competizioni coperte dal Free Tier dell'API
+# Elenco delle 12 competizioni coperte dal Free Tier dell'API
 campionati = {
     "PL": {"nome": "Campionato Inglese (Premier League)", "bandiera": "🇬🇧"},
     "PD": {"nome": "Campionato Spagnolo (La Liga)", "bandiera": "🇪🇸"},
@@ -64,8 +64,6 @@ if "archivio_partite_globali" not in st.session_state:
   st.session_state.archivio_partite_globali = []
 if "ultimo_report" not in st.session_state:
   st.session_state.ultimo_report = []
-if "campionati_analizzati" not in st.session_state:
-  st.session_state.campionati_analizzati = set()
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
@@ -82,7 +80,6 @@ with tab1:
     camp_options = [
         (code, f"{c['bandiera']} {c['nome']}") for code, c in campionati.items()
     ]
-    # Selezione multipla dei campionati
     leghe_selezionate = st.multiselect(
         "Seleziona uno o più campionati da analizzare:",
         options=[opt[0] for opt in camp_options],
@@ -184,7 +181,6 @@ with tab1:
 
         matchday_list = []
         if tutti_corrente:
-          ora_attuale = datetime.datetime.utcnow()
           partite_future_reali = [
               m
               for m in tutti_corrente
@@ -335,7 +331,7 @@ with tab1:
 
           mercati_partita = [
               {"mercato": f"1X2: Casa ({casa})", "prob": clamp(prob_1)},
-              {"mercato": f"1X2: X (Pareggio)", "prob": clamp(prob_x)},
+              {"mercato": "1X2: X (Pareggio)", "prob": clamp(prob_x)},
               {"mercato": f"1X2: Ospite ({ospite})", "prob": clamp(prob_2)},
               {"mercato": "Over 1.5", "prob": clamp(prob_over15)},
               {"mercato": "Under 1.5", "prob": clamp(prob_under15)},
@@ -387,11 +383,8 @@ with tab1:
               "_miglior_prob": miglior_scelta["prob"],
               "_tutti_i_mercati": mercati_partita,
           }
-
           report_totale_sessione.append(diz_partita)
-          st.session_state.campionati_analizzati.add(league_code)
 
-          # Aggiorna l'archivio globale evitando duplicati dello stesso incontro
           esistente = next(
               (
                   p
@@ -406,7 +399,7 @@ with tab1:
 
       st.session_state.ultimo_report = report_totale_sessione
       progress_bar.empty()
-      st.success("✅ Analisi completata per tutti i campionati selezionati!")
+      st.success("✅ Analisi completata!")
       st.rerun()
 
   if st.session_state.get("ultimo_report"):
@@ -418,7 +411,7 @@ with tab1:
     st.dataframe(df_report[display_cols], use_container_width=True)
 
 with tab2:
-  st.subheader("🎟️ Generatore Schedina: Manuale o Automatico")
+  st.subheader("🎟️ Generatore Schedina Intelligente e Personalizzabile")
 
   if not st.session_state.archivio_partite_globali:
     st.info(
@@ -426,132 +419,106 @@ with tab2:
         " Giocatori' per popolare la schedina."
     )
   else:
-    modalita_scelta = st.radio(
-        "Scegli la modalità di compilazione:",
-        [
-            "🛠️ Selezione Manuale (Scegli tu le partite e i mercati)",
-            "🎲 Generatore Automatico Intelligente",
-        ],
-        horizontal=True,
+    # --- FILTRI DI CONFIGURAZIONE DELLA SCHEDINA ---
+    campionati_presenti = list(
+        set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
+    col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1, 1, 1])
 
-    budget = st.number_input("Budget puntata (€):", 1.00, 1000.00, 10.00)
-    selezioni_schedina = []
-
-    if "Manuale" in modalita_scelta:
-      st.markdown(
-          "---"
-      )  # Spaziatore pulito senza testo non necessario.
-      st.markdown(
-          "#### Seleziona gli eventi e personalizza i pronostici dall'archivio"
-          " globale:"
+    with col_f1:
+      filtro_camp = st.selectbox(
+          "Filtra per Campionato:",
+          options=["Tutti i campionati"] + campionati_presenti,
       )
 
-      for idx, p in enumerate(st.session_state.archivio_partite_globali):
-        col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
-        with col_m1:
-          attivo = st.checkbox(
-              f"**{p['Incontro']}** ({p['Campionato']})",
-              value=False,
-              key=f"chk_{idx}",
-          )
-        with col_m2:
-          # Lista di tutti i mercati disponibili per quella partita
-          opzioni_mercati = [m["mercato"] for m in p["_tutti_i_mercati"]]
-          mercato_default = p["_miglior_mercato"]
-          idx_default = (
-              opzioni_mercati.index(mercato_default)
-              if mercato_default in opzioni_mercati
-              else 0
-          )
-          mercato_scelto = st.selectbox(
-              "Mercato:",
-              options=opzioni_mercati,
-              index=idx_default,
-              key=f"merc_{idx}",
-              label_visibility="collapsed",
-          )
-        with col_m3:
-          st.text(f"🕒 {p['📅 Data e Ora']}")
+    # Elenco mercati standard disponibili
+    tutti_i_mercati_possibili = [
+        "Consiglio Automatico (Miglior Pronostico)",
+        "Over 1.5",
+        "Under 1.5",
+        "Over 2.5",
+        "Under 2.5",
+        "Gol",
+        "No Gol",
+        "Gol 1°T Sì",
+        "Rigore Sì",
+        "1X2: 1 (Casa)",
+        "1X2: X (Pareggio)",
+        "1X2: 2 (Ospite)",
+        "Corner Over 8.5",
+        "Cartellini Over 3.5",
+    ]
 
-        if attivo:
-          # Trova la probabilità associata al mercato scelto
-            dati_m = next(
-                (
-                    m
-                    for m in p["_tutti_i_mercati"]
-                    if m["mercato"] == mercato_scelto
-                ),
-                p["_tutti_i_mercati"][0],
-            )
-            prob_val = dati_m["prob"]
-            quota_stimata = round(
-                max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
-            )
+    with col_f2:
+      mercato_forzato = st.selectbox(
+          "Forza Mercato:", options=tutti_i_mercati_possibili
+      )
 
-            selezioni_schedina.append({
-                "Incontro": p["Incontro"],
-                "Data e Ora": p["📅 Data e Ora"],
-                "Pronostico": mercato_scelto,
-                "Probabilità": f"{prob_val * 100:.1f}%",
-                "Quota Stimata": quota_stimata,
-            })
+    with col_f3:
+      num_eventi = st.number_input(
+          "Numero di eventi:",
+          min_value=1,
+          max_value=len(st.session_state.archivio_partite_globali),
+          value=min(6, len(st.session_state.archivio_partite_globali)),
+      )
 
-    else:
-      col_s1, col_s2 = st.columns(2)
-      with col_s1:
-        num_eventi = st.slider(
-            "Numero di eventi in schedina:",
-            1,
-            len(st.session_state.archivio_partite_globali),
-            min(3, len(st.session_state.archivio_partite_globali)),
+    with col_f4:
+      budget = st.number_input(
+          "Budget puntata (€):", min_value=1.00, max_value=1000.00, value=5.00
+      )
+
+    st.markdown("---")
+
+    # Filtriamo le partite in base al campionato scelto
+    partite_filtrate = st.session_state.archivio_partite_globali
+    if filtro_camp != "Tutti i campionati":
+      partite_filtrate = [
+          p
+          for p in st.session_state.archivio_partite_globali
+          if p["Campionato"] == filtro_camp
+      ]
+
+    selezioni_schedina = []
+    partite_campione = random.sample(
+        partite_filtrate, min(num_eventi, len(partite_filtrate))
+    )
+
+    for p in partite_campione:
+      # Determina il mercato e la probabilità in base alla scelta dell'utente
+      if mercato_forzato == "Consiglio Automatico (Miglior Pronostico)":
+        mercato_scelto = p["_miglior_mercato"]
+        prob_val = p["_miglior_prob"]
+      else:
+        # Cerca il mercato specifico scelto dall'utente nei dati della partita
+        m_trovato = next(
+            (
+                m
+                for m in p["_tutti_i_mercati"]
+                if mercato_forzato.lower() in m["mercato"].lower()
+            ),
+            None,
         )
-      with col_s2:
-        quota_min = st.number_input("Quota minima per evento:", 1.05, 3.00, 1.20)
+        if m_trovato:
+          mercato_scelto = m_trovato["mercato"]
+          prob_val = m_trovato["prob"]
+        else:
+          mercato_scelto = p["_miglior_mercato"]
+          prob_val = p["_miglior_prob"]
 
-      if st.button("🎲 Genera Automaticamente", type="primary"):
-        partite_disponibili = list(st.session_state.archivio_partite_globali)
-        random.shuffle(partite_disponibili)
+      quota_stimata = round(
+          max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+      )
 
-        for p in partite_disponibili:
-          if len(selezioni_schedina) >= num_eventi:
-            break
-          mercato_top = p["_miglior_mercato"]
-          prob_top = p["_miglior_prob"]
-          quota_stimata = round(
-              max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
-          )
-          if quota_stimata >= quota_min:
-            selezioni_schedina.append({
-                "Incontro": p["Incontro"],
-                "Data e Ora": p["📅 Data e Ora"],
-                "Pronostico": mercato_top,
-                "Probabilità": f"{prob_top * 100:.1f}%",
-                "Quota Stimata": quota_stimata,
-            })
-
-        if len(selezioni_schedina) < num_eventi:
-          for p in partite_disponibili:
-            if len(selezioni_schedina) >= num_eventi:
-              break
-            if any(s["Incontro"] == p["Incontro"] for s in selezioni_schedina):
-              continue
-            mercato_top = p["_miglior_mercato"]
-            prob_top = p["_miglior_prob"]
-            quota_stimata = round(
-                max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
-            )
-            selezioni_schedina.append({
-                "Incontro": p["Incontro"],
-                "Data e Ora": p["📅 Data e Ora"],
-                "Pronostico": mercato_top,
-                "Probabilità": f"{prob_top * 100:.1f}%",
-                "Quota Stimata": quota_stimata,
-            })
+      selezioni_schedina.append({
+          "Incontro": p["Incontro"],
+          "Data e Ora": p["📅 Data e Ora"],
+          "Pronostico": mercato_scelto,
+          "Probabilità": f"{prob_val * 100:.1f}%",
+          "Quota Stimata": quota_stimata,
+      })
 
     if selezioni_schedina:
-      st.markdown("---")
-      st.markdown("### 🎫 La tua Schedina Finale")
+      st.markdown("### 📋 La tua Schedina Consigliata")
       df_schedina = pd.DataFrame(selezioni_schedina)
       st.dataframe(df_schedina, use_container_width=True)
 
@@ -560,22 +527,22 @@ with tab2:
         quota_totale *= s["Quota Stimata"]
 
       vincita_potenziale = budget * quota_totale
+
+      # Box verde pulito in stile originale
       st.success(
-          f"📊 **Eventi Selezionati:** {len(selezioni_schedina)} | 📈 **Quota"
-          f" Totale Combinata:** **{quota_totale:.2f}** | 💰 **Vincita"
-          f" Potenziale:** **{vincita_potenziale:.2f} €**"
+          f"📊 **Quota Totale Combinata:** {quota_totale:.2f} | 💰 **Vincita"
+          f" Potenziale:** {vincita_potenziale:.2f} €"
       )
     else:
-      if "Manuale" in modalita_scelta:
-        st.info(
-            "👆 Seleziona almeno una partita spuntando la casella corrispondente"
-            " qui sopra per costruire la schedina."
-        )
+      st.warning(
+          "Nessuna partita disponibile con i filtri selezionati. Prova a"
+          " cambiare campionato."
+      )
 
 with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona **più campionati** contemporaneamente per unire tutte le partite in un unico archivio globale.
-    * **Tab 2:** Scegli se comporre la schedina **manualmente** (spuntando le partite e scegliendo i singoli mercati tra Over, Gol, 1X2, Corner, ecc.) oppure affidarti al **Generatore Automatico**.
+    * **Tab 1:** Analizza i campionati desiderati caricando i dati storici e le giornate correnti.
+    * **Tab 2:** Configura la tua schedina scegliendo se visualizzare tutti i campionati o uno specifico, impostando il numero di eventi e bloccando un mercato specifico (es. solo *Over 1.5* o *1X2*).
     """)
