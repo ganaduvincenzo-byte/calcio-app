@@ -66,8 +66,6 @@ if "ultimo_report" not in st.session_state:
   st.session_state.ultimo_report = []
 if "campionati_analizzati" not in st.session_state:
   st.session_state.campionati_analizzati = set()
-if "ultimo_campionato_selezionato" not in st.session_state:
-  st.session_state.ultimo_campionato_selezionato = None
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
@@ -75,22 +73,22 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 with tab1:
-  st.subheader("🌍 Seleziona e Analizza il Turno di Campionato / Coppe")
+  st.subheader(
+      "🌍 Seleziona Più Campionati e Avvia l'Analisi Multi-Competizione"
+  )
 
-  col1, col2, col3 = st.columns([2, 1, 1])
+  col1, col2 = st.columns([3, 1])
   with col1:
-    camp_options = []
-    for code, c in campionati.items():
-      prefix = "✔️ " if code in st.session_state.campionati_analizzati else ""
-      camp_options.append((code, f"{prefix}{c['bandiera']} {c['nome']}"))
-
-    league_code = st.selectbox(
-        "Campionato / Competizione:",
+    camp_options = [
+        (code, f"{c['bandiera']} {c['nome']}") for code, c in campionati.items()
+    ]
+    # Selezione multipla dei campionati
+    leghe_selezionate = st.multiselect(
+        "Seleziona uno o più campionati da analizzare:",
         options=[opt[0] for opt in camp_options],
         format_func=lambda x: next(opt[1] for opt in camp_options if opt[0] == x),
+        default=["SA"] if "SA" in campionati else [camp_options[0][0]],
     )
-
-  selezionato = campionati[league_code]
 
   with col2:
     num_stagioni = st.selectbox(
@@ -104,142 +102,132 @@ with tab1:
         index=1,
     )
 
-  with col3:
-    st.write("")
-    st.write("")
-    btn_analizza = st.button(
-        "📊 Avvia Analisi", type="primary", use_container_width=True
-    )
-
-  if st.session_state.ultimo_campionato_selezionato != league_code:
-    st.session_state.ultimo_campionato_selezionato = league_code
+  btn_analizza = st.button(
+      "📊 Avvia Analisi Selezionati", type="primary", use_container_width=True
+  )
 
   if btn_analizza:
-    with st.spinner(
-        f"⏳ Caricamento calendario e storico reale per"
-        f" {selezionato['bandiera']} {selezionato['nome']}..."
-    ):
-      partite_finite_totali = []
-      tutti_corrente = []
-      marcatori_per_squadra = {}
+    if not leghe_selezionate:
+      st.warning("⚠️ Seleziona almeno un campionato prima di avviare l'analisi.")
+    else:
+      report_totale_sessione = []
+      progress_bar = st.progress(0)
+      tot_leghe = len(leghe_selezionate)
 
-      anno_corrente = datetime.datetime.now().year
-
-      url_base = (
-          f"https://api.football-data.org/v4/competitions/{league_code}/matches"
-      )
-      try:
-        resp_base = requests.get(url_base, headers=headers, timeout=10)
-        if resp_base.status_code == 200:
-          data_base = resp_base.json()
-          tutti_corrente = data_base.get("matches", [])
-
-        if not tutti_corrente:
-          url_season_curr = f"{url_base}?season={anno_corrente}"
-          resp_curr = requests.get(url_season_curr, headers=headers, timeout=10)
-          if resp_curr.status_code == 200:
-            tutti_corrente = resp_curr.json().get("matches", [])
-
-        partite_finite_totali.extend(
-            [m for m in tutti_corrente if m.get("status") == "FINISHED"]
+      for idx, league_code in enumerate(leghe_selezionate):
+        selezionato = campionati[league_code]
+        progress_bar.progress(
+            (idx + 1) / tot_leghe,
+            text=f"Analisi in corso per {selezionato['bandiera']} {selezionato['nome']}...",
         )
-      except Exception:
-        pass
 
-      if num_stagioni > 1:
-        anni_passati = [anno_corrente - i for i in range(1, num_stagioni)]
-        for anno_p in anni_passati:
-          url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}"
-          try:
-            resp_season = requests.get(url_season, headers=headers, timeout=10)
-            if resp_season.status_code == 200:
-              d_season = resp_season.json()
-              m_fin_passate = [
-                  m
-                  for m in d_season.get("matches", [])
-                  if m.get("status") == "FINISHED"
-              ]
-              partite_finite_totali.extend(m_fin_passate)
-          except Exception:
-            pass
+        partite_finite_totali = []
+        tutti_corrente = []
+        marcatori_per_squadra = {}
+        anno_corrente = datetime.datetime.now().year
+        url_base = (
+            f"https://api.football-data.org/v4/competitions/{league_code}/matches"
+        )
 
-      # Caricamento marcatori basato su ID squadra
-      url_scorers = (
-          f"https://api.football-data.org/v4/competitions/{league_code}/scorers"
-      )
-      try:
-        resp_sc = requests.get(url_scorers, headers=headers, timeout=10)
-        if resp_sc.status_code == 200:
-          data_sc = resp_sc.json()
-          for scorer in data_sc.get("scorers", []):
-            p_nome = scorer.get("player", {}).get("name", "Sconosciuto")
-            t_id = scorer.get("team", {}).get("id")
-            if t_id:
-              if t_id not in marcatori_per_squadra:
-                marcatori_per_squadra[t_id] = []
-              marcatori_per_squadra[t_id].append(p_nome)
-      except Exception:
-        pass
+        try:
+          resp_base = requests.get(url_base, headers=headers, timeout=10)
+          if resp_base.status_code == 200:
+            tutti_corrente = resp_base.json().get("matches", [])
+          if not tutti_corrente:
+            resp_curr = requests.get(
+                f"{url_base}?season={anno_corrente}",
+                headers=headers,
+                timeout=10,
+            )
+            if resp_curr.status_code == 200:
+              tutti_corrente = resp_curr.json().get("matches", [])
+          partite_finite_totali.extend(
+              [m for m in tutti_corrente if m.get("status") == "FINISHED"]
+          )
+        except Exception:
+          pass
 
-      matchday_list = []
-      if tutti_corrente:
-        ora_attuale = datetime.datetime.utcnow()
-        partite_future_reali = []
+        if num_stagioni > 1:
+          for anno_p in [anno_corrente - i for i in range(1, num_stagioni)]:
+            try:
+              resp_season = requests.get(
+                  f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_p}",
+                  headers=headers,
+                  timeout=10,
+              )
+              if resp_season.status_code == 200:
+                m_fin_passate = [
+                    m
+                    for m in resp_season.json().get("matches", [])
+                    if m.get("status") == "FINISHED"
+                ]
+                partite_finite_totali.extend(m_fin_passate)
+            except Exception:
+              pass
 
-        for m in tutti_corrente:
-          status = m.get("status")
-          utc_date_str = m.get("utcDate")
+        try:
+          resp_sc = requests.get(
+              f"https://api.football-data.org/v4/competitions/{league_code}/scorers",
+              headers=headers,
+              timeout=10,
+          )
+          if resp_sc.status_code == 200:
+            for scorer in resp_sc.json().get("scorers", []):
+              p_nome = scorer.get("player", {}).get("name", "Sconosciuto")
+              t_id = scorer.get("team", {}).get("id")
+              if t_id:
+                if t_id not in marcatori_per_squadra:
+                  marcatori_per_squadra[t_id] = []
+                marcatori_per_squadra[t_id].append(p_nome)
+        except Exception:
+          pass
 
-          if status in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]:
-            if utc_date_str:
-              try:
-                dt_utc = datetime.datetime.strptime(
-                    utc_date_str.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
-                )
-                if dt_utc >= ora_attuale - datetime.timedelta(hours=3):
-                  partite_future_reali.append(m)
-              except Exception:
-                pass
-            else:
-              partite_future_reali.append(m)
-
-        if partite_future_reali:
-          primo_matchday_futuro = partite_future_reali[0].get("matchday")
-          matchday_list = [
+        matchday_list = []
+        if tutti_corrente:
+          ora_attuale = datetime.datetime.utcnow()
+          partite_future_reali = [
               m
               for m in tutti_corrente
-              if m.get("matchday") == primo_matchday_futuro
-              and m.get("status") not in ["FINISHED"]
+              if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
           ]
-        else:
-          matchday_list = []
+          if partite_future_reali:
+            primo_matchday_futuro = partite_future_reali[0].get("matchday")
+            matchday_list = [
+                m
+                for m in tutti_corrente
+                if m.get("matchday") == primo_matchday_futuro
+                and m.get("status") not in ["FINISHED"]
+            ]
 
-      if partite_finite_totali:
-        media_casa = sum(
-            m["score"]["fullTime"]["home"]
-            for m in partite_finite_totali
-            if m.get("score")
-            and m["score"].get("fullTime")
-            and m["score"]["fullTime"]["home"] is not None
-        ) / max(1, len(partite_finite_totali))
-        media_ospiti = sum(
-            m["score"]["fullTime"]["away"]
-            for m in partite_finite_totali
-            if m.get("score")
-            and m["score"].get("fullTime")
-            and m["score"]["fullTime"]["away"] is not None
-        ) / max(1, len(partite_finite_totali))
-      else:
-        media_casa, media_ospiti = 1.45, 1.15
-
-      if len(matchday_list) > 0:
+        media_casa = (
+            sum(
+                m["score"]["fullTime"]["home"]
+                for m in partite_finite_totali
+                if m.get("score")
+                and m["score"].get("fullTime")
+                and m["score"]["fullTime"]["home"] is not None
+            )
+            / max(1, len(partite_finite_totali))
+            if partite_finite_totali
+            else 1.45
+        )
+        media_ospiti = (
+            sum(
+                m["score"]["fullTime"]["away"]
+                for m in partite_finite_totali
+                if m.get("score")
+                and m["score"].get("fullTime")
+                and m["score"]["fullTime"]["away"] is not None
+            )
+            / max(1, len(partite_finite_totali))
+            if partite_finite_totali
+            else 1.15
+        )
 
         def poisson(lmbda, k):
           return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
 
-        report_giornata = []
         incontri_visti = set()
-
         for match in matchday_list:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
@@ -257,8 +245,9 @@ with tab1:
               dt_utc = datetime.datetime.strptime(
                   utc_date_str.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
               )
-              dt_ita = dt_utc + datetime.timedelta(hours=2)
-              data_ora_formattata = dt_ita.strftime("%d/%m/%Y %H:%M")
+              data_ora_formattata = (
+                  dt_utc + datetime.timedelta(hours=2)
+              ).strftime("%d/%m/%Y %H:%M")
             except Exception:
               data_ora_formattata = "Da definire"
           else:
@@ -274,11 +263,11 @@ with tab1:
               and m["score"].get("fullTime")
               and m["score"]["fullTime"]["home"] is not None
           ]
-          if len(valid_home_goals) > 0:
-            xg_c = sum(valid_home_goals) / len(valid_home_goals)
-          else:
-            seed_c = (abs(hash(casa)) % 7) * 0.12
-            xg_c = max(0.8, media_casa + seed_c - 0.2)
+          xg_c = (
+              sum(valid_home_goals) / len(valid_home_goals)
+              if valid_home_goals
+              else max(0.8, media_casa + (abs(hash(casa)) % 7) * 0.12 - 0.2)
+          )
 
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
@@ -290,11 +279,11 @@ with tab1:
               and m["score"].get("fullTime")
               and m["score"]["fullTime"]["away"] is not None
           ]
-          if len(valid_away_goals) > 0:
-            xg_o = sum(valid_away_goals) / len(valid_away_goals)
-          else:
-            seed_o = (abs(hash(ospite)) % 7) * 0.12
-            xg_o = max(0.7, media_ospiti + seed_o - 0.3)
+          xg_o = (
+              sum(valid_away_goals) / len(valid_away_goals)
+              if valid_away_goals
+              else max(0.7, media_ospiti + (abs(hash(ospite)) % 7) * 0.12 - 0.3)
+          )
 
           prob_1, prob_x, prob_2 = 0, 0, 0
           prob_over15, prob_over25 = 0, 0
@@ -305,44 +294,37 @@ with tab1:
           for g_casa in range(6):
             for g_ospite in range(6):
               p = poisson(xg_c, g_casa) * poisson(xg_o, g_ospite)
-
               if p > max_p_risultato:
                 max_p_risultato = p
                 risultato_esatto = f"{g_casa} - {g_ospite}"
-
               if g_casa > g_ospite:
                 prob_1 += p
               elif g_casa == g_ospite:
                 prob_x += p
               else:
                 prob_2 += p
-
-              tot_gol = g_casa + g_ospite
-              if tot_gol > 1.5:
+              if g_casa + g_ospite > 1.5:
                 prob_over15 += p
-              if tot_gol > 2.5:
+              if g_casa + g_ospite > 2.5:
                 prob_over25 += p
-
               if g_casa > 0 and g_ospite > 0:
                 prob_gol += p
 
           prob_under15 = 1.0 - prob_over15
           prob_under25 = 1.0 - prob_over25
           prob_nogol = 1.0 - prob_gol
-
-          xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
-          prob_gol_1t = 1 - (poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0))
-
+          prob_gol_1t = 1 - (
+              poisson(xg_c * 0.42, 0) * poisson(xg_o * 0.42, 0)
+          )
           stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
-          diff_forza = abs(xg_c - xg_o)
-          stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
+          stima_cartellini = max(
+              3.8, round(5.2 - (abs(xg_c - xg_o) * 0.5), 1)
+          )
           prob_rigore_si = min(0.50, max(0.22, 0.25 + (xg_c + xg_o) * 0.04))
-
           prob_over85_corner = min(
               0.88, max(0.35, 0.50 + (stimacorner - 9.0) * 0.08)
           )
           prob_under95_corner = 1.0 - prob_over85_corner
-
           prob_over35_cartellini = min(
               0.90, max(0.30, 0.50 + (stima_cartellini - 4.0) * 0.10)
           )
@@ -351,64 +333,27 @@ with tab1:
           def clamp(val):
             return min(0.95, max(0.05, val))
 
-          prob_1 = clamp(prob_1)
-          prob_x = clamp(prob_x)
-          prob_2 = clamp(prob_2)
-          prob_over15 = clamp(prob_over15)
-          prob_under15 = clamp(prob_under15)
-          prob_over25 = clamp(prob_over25)
-          prob_under25 = clamp(prob_under25)
-          prob_gol = clamp(prob_gol)
-          prob_nogol = clamp(prob_nogol)
-          prob_gol_1t = clamp(prob_gol_1t)
-          prob_rigore_si = clamp(prob_rigore_si)
-          prob_over85_corner = clamp(prob_over85_corner)
-          prob_under95_corner = clamp(prob_under95_corner)
-          prob_over35_cartellini = clamp(prob_over35_cartellini)
-          prob_under45_cartellini = clamp(prob_under45_cartellini)
-
-          lista_marcatori_casa = marcatori_per_squadra.get(home_id, [])
-          marcatore_c_str = (
-              lista_marcatori_casa[0]
-              if lista_marcatori_casa
-              else f"Attaccante ({casa})"
-          )
-
-          lista_marcatori_ospite = marcatori_per_squadra.get(away_id, [])
-          marcatore_o_str = (
-              lista_marcatori_ospite[0]
-              if lista_marcatori_ospite
-              else f"Attaccante ({ospite})"
-          )
-
-          stringa_marcatori = f"⚽ {marcatore_c_str} / {marcatore_o_str}"
-          rischio_ammonizione = (
-              "Alto (Mediana aggressiva)"
-              if stima_cartellini > 4.5
-              else "Moderato"
-          )
-
           mercati_partita = [
-              {"mercato": f"1X2: Casa ({casa})", "prob": prob_1},
-              {"mercato": f"1X2: X (Pareggio)", "prob": prob_x},
-              {"mercato": f"1X2: Ospite ({ospite})", "prob": prob_2},
-              {"mercato": "Over 1.5", "prob": prob_over15},
-              {"mercato": "Under 1.5", "prob": prob_under15},
-              {"mercato": "Over 2.5", "prob": prob_over25},
-              {"mercato": "Under 2.5", "prob": prob_under25},
-              {"mercato": "Gol", "prob": prob_gol},
-              {"mercato": "No Gol", "prob": prob_nogol},
-              {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
-              {"mercato": "Rigore Sì", "prob": prob_rigore_si},
-              {"mercato": "Corner Over 8.5", "prob": prob_over85_corner},
-              {"mercato": "Corner Under 9.5", "prob": prob_under95_corner},
+              {"mercato": f"1X2: Casa ({casa})", "prob": clamp(prob_1)},
+              {"mercato": f"1X2: X (Pareggio)", "prob": clamp(prob_x)},
+              {"mercato": f"1X2: Ospite ({ospite})", "prob": clamp(prob_2)},
+              {"mercato": "Over 1.5", "prob": clamp(prob_over15)},
+              {"mercato": "Under 1.5", "prob": clamp(prob_under15)},
+              {"mercato": "Over 2.5", "prob": clamp(prob_over25)},
+              {"mercato": "Under 2.5", "prob": clamp(prob_under25)},
+              {"mercato": "Gol", "prob": clamp(prob_gol)},
+              {"mercato": "No Gol", "prob": clamp(prob_nogol)},
+              {"mercato": "Gol 1°T Sì", "prob": clamp(prob_gol_1t)},
+              {"mercato": "Rigore Sì", "prob": clamp(prob_rigore_si)},
+              {"mercato": "Corner Over 8.5", "prob": clamp(prob_over85_corner)},
+              {"mercato": "Corner Under 9.5", "prob": clamp(prob_under95_corner)},
               {
                   "mercato": "Cartellini Over 3.5",
-                  "prob": prob_over35_cartellini,
+                  "prob": clamp(prob_over35_cartellini),
               },
               {
                   "mercato": "Cartellini Under 4.5",
-                  "prob": prob_under45_cartellini,
+                  "prob": clamp(prob_under45_cartellini),
               },
           ]
 
@@ -431,20 +376,27 @@ with tab1:
               "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
               "Corner": stimacorner,
               "Cartellini": stima_cartellini,
-              "🔍 Marcatore Probabile": stringa_marcatori,
-              "⚠️ Rischio Cartellini": rischio_ammonizione,
+              "🔍 Marcatore Probabile": (
+                  f"⚽ {marcatori_per_squadra.get(home_id, ['Attaccante'])[0]} /"
+                  f" {marcatori_per_squadra.get(away_id, ['Attaccante'])[0]}"
+              ),
+              "⚠️ Rischio Cartellini": (
+                  "Alto" if stima_cartellini > 4.5 else "Moderato"
+              ),
               "_miglior_mercato": miglior_scelta["mercato"],
               "_miglior_prob": miglior_scelta["prob"],
               "_tutti_i_mercati": mercati_partita,
           }
-          report_giornata.append(diz_partita)
 
+          report_totale_sessione.append(diz_partita)
+          st.session_state.campionati_analizzati.add(league_code)
+
+          # Aggiorna l'archivio globale evitando duplicati dello stesso incontro
           esistente = next(
               (
                   p
                   for p in st.session_state.archivio_partite_globali
                   if p["Incontro"] == diz_partita["Incontro"]
-                  and p.get("Codice") == league_code
               ),
               None,
           )
@@ -452,31 +404,21 @@ with tab1:
             st.session_state.archivio_partite_globali.remove(esistente)
           st.session_state.archivio_partite_globali.append(diz_partita)
 
-        st.session_state.campionati_analizzati.add(league_code)
-        st.session_state.ultimo_report = report_giornata
-        st.success(
-            f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']}!"
-        )
-        st.rerun()
-      else:
-        st.warning(
-            "⚠️ Al momento non ci sono partite future programmate per questa"
-            " competizione nel calendario ufficiale dell'API."
-        )
+      st.session_state.ultimo_report = report_totale_sessione
+      progress_bar.empty()
+      st.success("✅ Analisi completata per tutti i campionati selezionati!")
+      st.rerun()
 
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
     display_cols = [
-        c
-        for c in df_report.columns
-        if not c.startswith("_") and c not in ["Campionato", "Codice"]
+        c for c in df_report.columns if not c.startswith("_") and c != "Codice"
     ]
     st.markdown("### 📋 Tabella Dettagliata & Risultati Esatti Stimati")
     st.dataframe(df_report[display_cols], use_container_width=True)
 
 with tab2:
-  st.subheader("🎟️ Generatore Schedina Intelligente e Personalizzabile")
+  st.subheader("🎟️ Generatore Schedina: Manuale o Automatico")
 
   if not st.session_state.archivio_partite_globali:
     st.info(
@@ -484,84 +426,156 @@ with tab2:
         " Giocatori' per popolare la schedina."
     )
   else:
-    col_s1, col_s2, col_s3 = st.columns(3)
-    with col_s1:
-      num_eventi = st.slider("Numero di eventi in schedina:", 1, 10, 3)
-    with col_s2:
-      quota_min = st.number_input("Quota minima per evento:", 1.05, 3.00, 1.20)
-    with col_s3:
-      budget = st.number_input("Budget puntata (€):", 1.00, 1000.00, 10.00)
+    modalita_scelta = st.radio(
+        "Scegli la modalità di compilazione:",
+        [
+            "🛠️ Selezione Manuale (Scegli tu le partite e i mercati)",
+            "🎲 Generatore Automatico Intelligente",
+        ],
+        horizontal=True,
+    )
 
-    if st.button("🎲 Genera Schedina Vincente", type="primary"):
-      partite_disponibili = list(st.session_state.archivio_partite_globali)
-      random.shuffle(partite_disponibili)
+    budget = st.number_input("Budget puntata (€):", 1.00, 1000.00, 10.00)
+    selezioni_schedina = []
 
-      selezioni_schedina = []
-      # Primo tentativo filtrando per quota minima
-      for p in partite_disponibili:
-        if len(selezioni_schedina) >= num_eventi:
-          break
-        mercato_top = p["_miglior_mercato"]
-        prob_top = p["_miglior_prob"]
-        quota_stimata = round(
-            max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
+    if "Manuale" in modalita_scelta:
+      st.markdown(
+          "---"
+      )  # Spaziatore pulito senza testo non necessario.
+      st.markdown(
+          "#### Seleziona gli eventi e personalizza i pronostici dall'archivio"
+          " globale:"
+      )
+
+      for idx, p in enumerate(st.session_state.archivio_partite_globali):
+        col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+        with col_m1:
+          attivo = st.checkbox(
+              f"**{p['Incontro']}** ({p['Campionato']})",
+              value=False,
+              key=f"chk_{idx}",
+          )
+        with col_m2:
+          # Lista di tutti i mercati disponibili per quella partita
+          opzioni_mercati = [m["mercato"] for m in p["_tutti_i_mercati"]]
+          mercato_default = p["_miglior_mercato"]
+          idx_default = (
+              opzioni_mercati.index(mercato_default)
+              if mercato_default in opzioni_mercati
+              else 0
+          )
+          mercato_scelto = st.selectbox(
+              "Mercato:",
+              options=opzioni_mercati,
+              index=idx_default,
+              key=f"merc_{idx}",
+              label_visibility="collapsed",
+          )
+        with col_m3:
+          st.text(f"🕒 {p['📅 Data e Ora']}")
+
+        if attivo:
+          # Trova la probabilità associata al mercato scelto
+            dati_m = next(
+                (
+                    m
+                    for m in p["_tutti_i_mercati"]
+                    if m["mercato"] == mercato_scelto
+                ),
+                p["_tutti_i_mercati"][0],
+            )
+            prob_val = dati_m["prob"]
+            quota_stimata = round(
+                max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+            )
+
+            selezioni_schedina.append({
+                "Incontro": p["Incontro"],
+                "Data e Ora": p["📅 Data e Ora"],
+                "Pronostico": mercato_scelto,
+                "Probabilità": f"{prob_val * 100:.1f}%",
+                "Quota Stimata": quota_stimata,
+            })
+
+    else:
+      col_s1, col_s2 = st.columns(2)
+      with col_s1:
+        num_eventi = st.slider(
+            "Numero di eventi in schedina:",
+            1,
+            len(st.session_state.archivio_partite_globali),
+            min(3, len(st.session_state.archivio_partite_globali)),
         )
+      with col_s2:
+        quota_min = st.number_input("Quota minima per evento:", 1.05, 3.00, 1.20)
 
-        if quota_stimata >= quota_min:
-          selezioni_schedina.append({
-              "Incontro": p["Incontro"],
-              "Data e Ora": p["📅 Data e Ora"],
-              "Pronostico": mercato_top,
-              "Probabilità": f"{prob_top * 100:.1f}%",
-              "Quota Stimata": quota_stimata,
-          })
+      if st.button("🎲 Genera Automaticamente", type="primary"):
+        partite_disponibili = list(st.session_state.archivio_partite_globali)
+        random.shuffle(partite_disponibili)
 
-      # Se non bastano, prendiamo anche le altre partite disponibili senza bloccarci sulla quota minima
-      if len(selezioni_schedina) < num_eventi:
         for p in partite_disponibili:
           if len(selezioni_schedina) >= num_eventi:
             break
-          # Evita duplicati di incontri già inseriti
-          if any(s["Incontro"] == p["Incontro"] for s in selezioni_schedina):
-            continue
           mercato_top = p["_miglior_mercato"]
           prob_top = p["_miglior_prob"]
           quota_stimata = round(
               max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
           )
-          selezioni_schedina.append({
-              "Incontro": p["Incontro"],
-              "Data e Ora": p["📅 Data e Ora"],
-              "Pronostico": mercato_top,
-              "Probabilità": f"{prob_top * 100:.1f}%",
-              "Quota Stimata": quota_stimata,
-          })
+          if quota_stimata >= quota_min:
+            selezioni_schedina.append({
+                "Incontro": p["Incontro"],
+                "Data e Ora": p["📅 Data e Ora"],
+                "Pronostico": mercato_top,
+                "Probabilità": f"{prob_top * 100:.1f}%",
+                "Quota Stimata": quota_stimata,
+            })
 
-      if selezioni_schedina:
-        df_schedina = pd.DataFrame(selezioni_schedina)
-        st.markdown("### 🎫 La tua Schedina Consigliata")
-        st.dataframe(df_schedina, use_container_width=True)
+        if len(selezioni_schedina) < num_eventi:
+          for p in partite_disponibili:
+            if len(selezioni_schedina) >= num_eventi:
+              break
+            if any(s["Incontro"] == p["Incontro"] for s in selezioni_schedina):
+              continue
+            mercato_top = p["_miglior_mercato"]
+            prob_top = p["_miglior_prob"]
+            quota_stimata = round(
+                max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
+            )
+            selezioni_schedina.append({
+                "Incontro": p["Incontro"],
+                "Data e Ora": p["📅 Data e Ora"],
+                "Pronostico": mercato_top,
+                "Probabilità": f"{prob_top * 100:.1f}%",
+                "Quota Stimata": quota_stimata,
+            })
 
-        quota_totale = 1.0
-        for s in selezioni_schedina:
-          quota_totale *= s["Quota Stimata"]
+    if selezioni_schedina:
+      st.markdown("---")
+      st.markdown("### 🎫 La tua Schedina Finale")
+      df_schedina = pd.DataFrame(selezioni_schedina)
+      st.dataframe(df_schedina, use_container_width=True)
 
-        vincita_potenziale = budget * quota_totale
-        st.success(
-            f"📊 **Quota Totale Combinata:** **{quota_totale:.2f}** | 💰"
-            f" **Vincita Potenziale:** **{vincita_potenziale:.2f} €**"
-        )
-      else:
-        st.warning(
-            "⚠️ Nessun evento disponibile in memoria. Analizza prima qualche"
-            " campionato nella scheda 'Analisi Turno & Giocatori'."
+      quota_totale = 1.0
+      for s in selezioni_schedina:
+        quota_totale *= s["Quota Stimata"]
+
+      vincita_potenziale = budget * quota_totale
+      st.success(
+          f"📊 **Eventi Selezionati:** {len(selezioni_schedina)} | 📈 **Quota"
+          f" Totale Combinata:** **{quota_totale:.2f}** | 💰 **Vincita"
+          f" Potenziale:** **{vincita_potenziale:.2f} €**"
+      )
+    else:
+      if "Manuale" in modalita_scelta:
+        st.info(
+            "👆 Seleziona almeno una partita spuntando la casella corrispondente"
+            " qui sopra per costruire la schedina."
         )
 
 with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
-    Benvenuto nel **Centro Analisi Calcio Pro**. Questa applicazione ti permette di analizzare le partite ufficiali dei campionati supportati sfruttando modelli statistici avanzati (Poisson, stime di xG storiche, corner, cartellini e marcatori).
-    
-    * **Tab 1 (Analisi Turno & Giocatori):** Scegli una delle competizioni ufficiali dell'API, seleziona la profondità storica desiderata e clicca su *Avvia Analisi*. Ricorda di analizzare più campionati per avere un archivio ricco di eventi da combinare!
-    * **Tab 2 (Schedina Vincente):** Configura i tuoi parametri e genera automaticamente una combinazione di scommesse basata sulle probabilità calcolate dal sistema.
+    Benvenuto nel **Centro Analisi Calcio Pro**. 
+    * **Tab 1:** Seleziona **più campionati** contemporaneamente per unire tutte le partite in un unico archivio globale.
+    * **Tab 2:** Scegli se comporre la schedina **manualmente** (spuntando le partite e scegliendo i singoli mercati tra Over, Gol, 1X2, Corner, ecc.) oppure affidarti al **Generatore Automatico**.
     """)
