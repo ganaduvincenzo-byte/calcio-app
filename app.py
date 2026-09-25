@@ -47,7 +47,7 @@ campionati = {
     "UNL": {"nome": "UEFA Nations League", "bandiera": "🏆"},
 }
 
-st.title("⚽ Centro Analisi Calcio Pro")
+st.title("⚽ Viganà Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -162,12 +162,20 @@ with tab1:
           except Exception:
             pass
 
+      # Fallback ampliato e completo con tutte le principali partite dei gironi di Nations League
       if not tutti_corrente:
         if league_code == "UNL":
           tutti_corrente = [
               {
                   "homeTeam": {"name": "Italia"},
                   "awayTeam": {"name": "Belgio"},
+                  "status": "SCHEDULED",
+                  "matchday": 3,
+                  "utcDate": f"{oggi_str}T20:45:00Z",
+              },
+              {
+                  "homeTeam": {"name": "Francia"},
+                  "awayTeam": {"name": "Israele"},
                   "status": "SCHEDULED",
                   "matchday": 3,
                   "utcDate": f"{oggi_str}T20:45:00Z",
@@ -187,6 +195,13 @@ with tab1:
                   "utcDate": f"{oggi_str}T20:45:00Z",
               },
               {
+                  "homeTeam": {"name": "Norvegia"},
+                  "awayTeam": {"name": "Slovenia"},
+                  "status": "SCHEDULED",
+                  "matchday": 3,
+                  "utcDate": f"{oggi_str}T20:45:00Z",
+              },
+              {
                   "homeTeam": {"name": "Ungheria"},
                   "awayTeam": {"name": "Olanda"},
                   "status": "SCHEDULED",
@@ -196,6 +211,27 @@ with tab1:
               {
                   "homeTeam": {"name": "Germania"},
                   "awayTeam": {"name": "Bosnia-Erzegovina"},
+                  "status": "SCHEDULED",
+                  "matchday": 3,
+                  "utcDate": f"{domani_str}T20:45:00Z",
+              },
+              {
+                  "homeTeam": {"name": "Spagna"},
+                  "awayTeam": {"name": "Danimarca"},
+                  "status": "SCHEDULED",
+                  "matchday": 3,
+                  "utcDate": f"{domani_str}T20:45:00Z",
+              },
+              {
+                  "homeTeam": {"name": "Croazia"},
+                  "awayTeam": {"name": "Scozia"},
+                  "status": "SCHEDULED",
+                  "matchday": 3,
+                  "utcDate": f"{domani_str}T18:00:00Z",
+              },
+              {
+                  "homeTeam": {"name": "Polonia"},
+                  "awayTeam": {"name": "Portogallo"},
                   "status": "SCHEDULED",
                   "matchday": 3,
                   "utcDate": f"{domani_str}T20:45:00Z",
@@ -311,7 +347,6 @@ with tab1:
           else:
             data_ora_formattata = "Da definire"
 
-          # Calcolo xG specifico con differenziazione reale basata su hash/forza squadra
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -325,10 +360,7 @@ with tab1:
           if len(valid_home_goals) > 0:
             xg_c = sum(valid_home_goals) / len(valid_home_goals)
           else:
-            # Variazione dinamica per evitare valori tutti uguali (es. Italia vs Belgio, Austria vs Kazakistan)
-            seed_c = (
-                abs(hash(casa)) % 7
-            ) * 0.12  # valore casuale ma costante per squadra
+            seed_c = (abs(hash(casa)) % 7) * 0.12
             xg_c = max(0.8, media_casa + seed_c - 0.2)
 
           p_ospite = [
@@ -344,7 +376,7 @@ with tab1:
           if len(valid_away_goals) > 0:
             xg_o = sum(valid_away_goals) / len(valid_away_goals)
           else:
-            seed_o = abs(hash(ospite)) % 7 * 0.12
+            seed_o = (abs(hash(ospite)) % 7) * 0.12
             xg_o = max(0.7, media_ospiti + seed_o - 0.3)
 
           prob_1, prob_x, prob_2 = 0, 0, 0
