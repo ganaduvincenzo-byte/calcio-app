@@ -106,8 +106,9 @@ with tab1:
     ):
       partite_finite_totali = []
       partite_future = []
+      tutti_corrente = []
 
-      # 1. Chiamata principale per prendere le partite correnti (future e finite di quest'anno)
+      # 1. Chiamata principale per le partite correnti
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
@@ -122,14 +123,13 @@ with tab1:
           partite_future = [
               m
               for m in tutti_corrente
-              if m.get("status") in ["TIMED", "SCHEDULED"]
+              if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
           ]
       except Exception:
         pass
 
-      # 2. Se l'utente ha chiesto più stagioni, peschiamo anche gli anni precedenti (es. 2024, 2023)
+      # 2. Caricamento stagioni passate per lo storico (2025, 2024, ecc.)
       if num_stagioni > 1:
-        # Anni di riferimento passati (partendo dall'anno scorso indietro)
         anni_passati = [2025, 2024, 2023]
         for idx in range(num_stagioni - 1):
           anno_p = anni_passati[idx]
@@ -147,17 +147,9 @@ with tab1:
           except Exception:
             pass
 
-      # Calcolo medie gol complessive dallo storico unito
-      if partite_finite_totali:
-        media_casa = sum(
-            m["score"]["fullTime"]["home"] for m in partite_finite_totali
-        ) / len(partite_finite_totali)
-        media_ospiti = sum(
-            m["score"]["fullTime"]["away"] for m in partite_finite_totali
-        ) / len(partite_finite_totali)
-      else:
-        media_casa, media_ospiti = 1.4, 1.1
-
+      # Sicurezza: Se l'API non restituisce partite future (es. pausa o fine/inizio giornata),
+      # prendiamo le ultime 10 partite giocate o disponibili come turno di simulazione/analisi
+      matchday_list = []
       if len(partite_future) > 0:
         prossima_giornata = partite_future[0].get("matchday", 1)
         matchday_list = [
@@ -165,6 +157,31 @@ with tab1:
         ]
         if not matchday_list:
           matchday_list = partite_future[:10]
+      else:
+        # Fallback: se non ci sono match futuri nell'immediato, prendiamo le ultime 10 della lista corrente
+        if tutti_corrente:
+          matchday_list = [
+              m for m in tutti_corrente if m.get("status") == "FINISHED"
+          ][-10:]
+        if not matchday_list and partite_finite_totali:
+          matchday_list = partite_finite_totali[-10:]
+
+      # Calcolo medie gol complessive dallo storico unito
+      if partite_finite_totali:
+        media_casa = sum(
+            m["score"]["fullTime"]["home"]
+            for m in partite_finite_totali
+            if m["score"]["fullTime"]["home"] is not None
+        ) / max(1, len(partite_finite_totali))
+        media_ospiti = sum(
+            m["score"]["fullTime"]["away"]
+            for m in partite_finite_totali
+            if m["score"]["fullTime"]["away"] is not None
+        ) / max(1, len(partite_finite_totali))
+      else:
+        media_casa, media_ospiti = 1.4, 1.1
+
+      if len(matchday_list) > 0:
 
         def poisson(lmbda, k):
           return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
@@ -178,10 +195,14 @@ with tab1:
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
+          valid_home_goals = [
+              m["score"]["fullTime"]["home"]
+              for m in p_casa
+              if m["score"]["fullTime"]["home"] is not None
+          ]
           xg_c = (
-              sum(m["score"]["fullTime"]["home"] for m in p_casa)
-              / len(p_casa)
-              if len(p_casa) > 0
+              sum(valid_home_goals) / len(valid_home_goals)
+              if len(valid_home_goals) > 0
               else media_casa
           )
 
@@ -189,10 +210,14 @@ with tab1:
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
           ]
+          valid_away_goals = [
+              m["score"]["fullTime"]["away"]
+              for m in p_ospite
+              if m["score"]["fullTime"]["away"] is not None
+          ]
           xg_o = (
-              sum(m["score"]["fullTime"]["away"] for m in p_ospite)
-              / len(p_ospite)
-              if len(p_ospite) > 0
+              sum(valid_away_goals) / len(valid_away_goals)
+              if len(valid_away_goals) > 0
               else media_ospiti
           )
 
@@ -313,15 +338,13 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Trovate {len(matchday_list)} partite in"
-            f" programma e analizzate {len(partite_finite_totali)} partite"
-            f" storiche totali)!"
+            f" {selezionato['nome']} (Analizzate {len(matchday_list)} partite"
+            f" usando {len(partite_finite_totali)} incontri storici totali)!"
         )
         st.rerun()
       else:
         st.warning(
-            "⚠️ Nessuna partita futura trovata per questo campionato in questo"
-            " momento."
+            "⚠️ Nessuna partita disponibile per l'analisi in questo momento."
         )
 
   if st.session_state.get("ultimo_report"):
