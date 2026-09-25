@@ -106,9 +106,8 @@ with tab1:
     ):
       partite_finite_totali = []
       partite_future = []
-      tutti_corrente = []
 
-      # 1. Chiamata principale per le partite correnti
+      # 1. Chiamata principale per il calendario corrente (partite finite e future)
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
@@ -128,7 +127,7 @@ with tab1:
       except Exception:
         pass
 
-      # 2. Caricamento stagioni passate per lo storico (2025, 2024, ecc.)
+      # 2. Caricamento delle stagioni passate per lo storico (es. 2025, 2024)
       if num_stagioni > 1:
         anni_passati = [2025, 2024, 2023]
         for idx in range(num_stagioni - 1):
@@ -147,24 +146,21 @@ with tab1:
           except Exception:
             pass
 
-      # Sicurezza: Se l'API non restituisce partite future (es. pausa o fine/inizio giornata),
-      # prendiamo le ultime 10 partite giocate o disponibili come turno di simulazione/analisi
+      # 3. Selezione della prima giornata futura disponibile (anche se lontana nel tempo)
       matchday_list = []
       if len(partite_future) > 0:
-        prossima_giornata = partite_future[0].get("matchday", 1)
+        # Ordiniamo per data o prendiamo il primo matchday disponibile con partite programmate
+        partite_future_ordinate = sorted(
+            partite_future, key=lambda x: x.get("utcDate", "")
+        )
+        prima_data_futura = partite_future_ordinate[0].get("matchday")
         matchday_list = [
-            m for m in partite_future if m.get("matchday") == prossima_giornata
+            m
+            for m in partite_future_ordinate
+            if m.get("matchday") == prima_data_futura
         ]
         if not matchday_list:
-          matchday_list = partite_future[:10]
-      else:
-        # Fallback: se non ci sono match futuri nell'immediato, prendiamo le ultime 10 della lista corrente
-        if tutti_corrente:
-          matchday_list = [
-              m for m in tutti_corrente if m.get("status") == "FINISHED"
-          ][-10:]
-        if not matchday_list and partite_finite_totali:
-          matchday_list = partite_finite_totali[-10:]
+          matchday_list = partite_future_ordinate[:10]
 
       # Calcolo medie gol complessive dallo storico unito
       if partite_finite_totali:
@@ -338,13 +334,14 @@ with tab1:
         st.session_state.ultimo_report = report_giornata
         st.success(
             f"✅ Analisi completata per {selezionato['bandiera']}"
-            f" {selezionato['nome']} (Analizzate {len(matchday_list)} partite"
-            f" usando {len(partite_finite_totali)} incontri storici totali)!"
+            f" {selezionato['nome']} (Trovata Giornata N. {matchday_list[0].get('matchday')} con"
+            f" {len(matchday_list)} partite, analizzate usando"
+            f" {len(partite_finite_totali)} incontri storici totali)!"
         )
         st.rerun()
       else:
         st.warning(
-            "⚠️ Nessuna partita disponibile per l'analisi in questo momento."
+            "⚠️ Nessuna giornata futura trovata per questo campionato."
         )
 
   if st.session_state.get("ultimo_report"):
@@ -507,9 +504,7 @@ with tab2:
 with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
-      "Questa applicazione utilizza modelli statistici avanzati basati sulla"
-      " **Distribuzione di Poisson** uniti all'analisi storica multi-stagione"
-      " per stimare con maggiore precisione il Risultato Esatto, i gol attesi"
-      " (xG), i corner, le ammonizioni, i marcatori, gli Over/Under e la stima"
-      " del **Rigore Sì**."
+      "Cette application utilise des modèles statistiques avancés basés sur"
+      " la **Distribution de Poisson** et l'analyse historique pluriannuelle"
+      " pour estimer les résultats."
   )
