@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
-# Stili CSS avanzati per un look moderno e pulito (come la prima versione)
+# Stili CSS avanzati per un look moderno e pulito
 st.markdown(
     """
 <style>
@@ -52,7 +52,7 @@ campionati = {
     "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
 }
 
-st.title("⚽ Centro Analisi Calcio Pro")
+st.title("⚽⚽ VIGANA  Centro Analisi Calcio Pro ⚽⚽")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -326,6 +326,19 @@ with tab1:
           )
           prob_under45_cartellini = 1.0 - prob_over35_cartellini
 
+          marcatore_casa = (
+              marcatori_per_squadra.get(home_id, ["Attaccante Casa"])[0]
+              if home_id in marcatori_per_squadra
+              else f"Bomber ({casa})"
+          )
+          marcatore_ospite = (
+              marcatori_per_squadra.get(away_id, ["Attaccante Ospite"])[0]
+              if away_id in marcatori_per_squadra
+              else f"Bomber ({ospite})"
+          )
+          prob_marcatore_c = min(0.65, max(0.20, xg_c * 0.35))
+          prob_marcatore_o = min(0.60, max(0.18, xg_o * 0.35))
+
           def clamp(val):
             return min(0.95, max(0.05, val))
 
@@ -351,6 +364,14 @@ with tab1:
                   "mercato": "Cartellini Under 4.5",
                   "prob": clamp(prob_under45_cartellini),
               },
+              {
+                  "mercato": f"Marcatore Si: {marcatore_casa}",
+                  "prob": clamp(prob_marcatore_c),
+              },
+              {
+                  "mercato": f"Marcatore Si: {marcatore_ospite}",
+                  "prob": clamp(prob_marcatore_o),
+              },
           ]
 
           miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
@@ -372,10 +393,7 @@ with tab1:
               "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
               "Corner": stimacorner,
               "Cartellini": stima_cartellini,
-              "🔍 Marcatore Probabile": (
-                  f"⚽ {marcatori_per_squadra.get(home_id, ['Attaccante'])[0]} /"
-                  f" {marcatori_per_squadra.get(away_id, ['Attaccante'])[0]}"
-              ),
+              "🔍 Marcatore Probabile": f"⚽ {marcatore_casa} / {marcatore_ospite}",
               "⚠️ Rischio Cartellini": (
                   "Alto" if stima_cartellini > 4.5 else "Moderato"
               ),
@@ -419,21 +437,20 @@ with tab2:
         " Giocatori' per popolare la schedina."
     )
   else:
-    # --- FILTRI DI CONFIGURAZIONE DELLA SCHEDINA ---
     campionati_presenti = list(
         set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
-    col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1, 1, 1])
 
+    col_f1, col_f2 = st.columns([2, 2])
     with col_f1:
-      filtro_camp = st.selectbox(
-          "Filtra per Campionato:",
-          options=["Tutti i campionati"] + campionati_presenti,
+      # Modificato da selectbox a multiselect per consentire la scelta di PIÙ campionati
+      campionati_scelti = st.multiselect(
+          "Seleziona uno o più campionati da giocare:",
+          options=campionati_presenti,
+          default=campionati_presenti,
       )
 
-    # Elenco mercati standard disponibili
     tutti_i_mercati_possibili = [
-        "Consiglio Automatico (Miglior Pronostico)",
         "Over 1.5",
         "Under 1.5",
         "Over 2.5",
@@ -446,20 +463,26 @@ with tab2:
         "1X2: X (Pareggio)",
         "1X2: 2 (Ospite)",
         "Corner Over 8.5",
+        "Corner Under 9.5",
         "Cartellini Over 3.5",
+        "Cartellini Under 4.5",
+        "Marcatore Si",
     ]
 
     with col_f2:
-      mercato_forzato = st.selectbox(
-          "Forza Mercato:", options=tutti_i_mercati_possibili
+      mercati_selezionati = st.multiselect(
+          "Scegli una o più opzioni di mercato desiderate:",
+          options=tutti_i_mercati_possibili,
+          default=["Over 1.5", "Gol"],
       )
 
+    col_f3, col_f4 = st.columns([2, 2])
     with col_f3:
       num_eventi = st.number_input(
-          "Numero di eventi:",
+          "Numero di eventi in schedina:",
           min_value=1,
-          max_value=len(st.session_state.archivio_partite_globali),
-          value=min(6, len(st.session_state.archivio_partite_globali)),
+          max_value=max(1, len(st.session_state.archivio_partite_globali)),
+          value=min(5, len(st.session_state.archivio_partite_globali)),
       )
 
     with col_f4:
@@ -469,53 +492,50 @@ with tab2:
 
     st.markdown("---")
 
-    # Filtriamo le partite in base al campionato scelto
-    partite_filtrate = st.session_state.archivio_partite_globali
-    if filtro_camp != "Tutti i campionati":
-      partite_filtrate = [
-          p
-          for p in st.session_state.archivio_partite_globali
-          if p["Campionato"] == filtro_camp
-      ]
+    # Filtriamo le partite in base ai campionati multipli scelti
+    partite_filtrate = [
+        p
+        for p in st.session_state.archivio_partite_globali
+        if p["Campionato"] in campionati_scelti
+    ]
 
     selezioni_schedina = []
-    partite_campione = random.sample(
-        partite_filtrate, min(num_eventi, len(partite_filtrate))
-    )
+    if partite_filtrate:
+      partite_campione = random.sample(
+          partite_filtrate, min(num_eventi, len(partite_filtrate))
+      )
 
-    for p in partite_campione:
-      # Determina il mercato e la probabilità in base alla scelta dell'utente
-      if mercato_forzato == "Consiglio Automatico (Miglior Pronostico)":
-        mercato_scelto = p["_miglior_mercato"]
-        prob_val = p["_miglior_prob"]
-      else:
-        # Cerca il mercato specifico scelto dall'utente nei dati della partita
-        m_trovato = next(
-            (
-                m
-                for m in p["_tutti_i_mercati"]
-                if mercato_forzato.lower() in m["mercato"].lower()
-            ),
-            None,
-        )
-        if m_trovato:
-          mercato_scelto = m_trovato["mercato"]
-          prob_val = m_trovato["prob"]
-        else:
+      for p in partite_campione:
+        mercato_scelto = None
+        prob_val = 0.0
+
+        if mercati_selezionati:
+          mercati_compatibili = []
+          for m in p["_tutti_i_mercati"]:
+            for ms in mercati_selezionati:
+              if ms.lower() in m["mercato"].lower():
+                mercati_compatibili.append(m)
+
+          if mercati_compatibili:
+            scelta_compatibile = max(mercati_compatibili, key=lambda x: x["prob"])
+            mercato_scelto = scelta_compatibile["mercato"]
+            prob_val = scelta_compatibile["prob"]
+
+        if not mercato_scelto:
           mercato_scelto = p["_miglior_mercato"]
           prob_val = p["_miglior_prob"]
 
-      quota_stimata = round(
-          max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
-      )
+        quota_stimata = round(
+            max(1.05, min(3.50, (1.0 / max(0.05, prob_val)) * 0.92)), 2
+        )
 
-      selezioni_schedina.append({
-          "Incontro": p["Incontro"],
-          "Data e Ora": p["📅 Data e Ora"],
-          "Pronostico": mercato_scelto,
-          "Probabilità": f"{prob_val * 100:.1f}%",
-          "Quota Stimata": quota_stimata,
-      })
+        selezioni_schedina.append({
+            "Incontro": p["Incontro"],
+            "Data e Ora": p["📅 Data e Ora"],
+            "Pronostico": mercato_scelto,
+            "Probabilità": f"{prob_val * 100:.1f}%",
+            "Quota Stimata": quota_stimata,
+        })
 
     if selezioni_schedina:
       st.markdown("### 📋 La tua Schedina Consigliata")
@@ -528,15 +548,14 @@ with tab2:
 
       vincita_potenziale = budget * quota_totale
 
-      # Box verde pulito in stile originale
       st.success(
           f"📊 **Quota Totale Combinata:** {quota_totale:.2f} | 💰 **Vincita"
           f" Potenziale:** {vincita_potenziale:.2f} €"
       )
     else:
       st.warning(
-          "Nessuna partita disponibile con i filtri selezionati. Prova a"
-          " cambiare campionato."
+          "Nessuna partita disponibile con i campionati o mercati"
+          " selezionati. Seleziona almeno un campionato."
       )
 
 with tab3:
@@ -544,5 +563,5 @@ with tab3:
   st.markdown("""
     Benvenuto nel **Centro Analisi Calcio Pro**. 
     * **Tab 1:** Analizza i campionati desiderati caricando i dati storici e le giornate correnti.
-    * **Tab 2:** Configura la tua schedina scegliendo se visualizzare tutti i campionati o uno specifico, impostando il numero di eventi e bloccando un mercato specifico (es. solo *Over 1.5* o *1X2*).
+    * **Tab 2:** Configura la tua schedina selezionando **più campionati**, spuntando **più opzioni di mercato** (es. *Over 1.5*, *Gol*, *Angoli*, *Cartellini*, *Marcatori*), impostando il numero di eventi e il budget.
     """)
