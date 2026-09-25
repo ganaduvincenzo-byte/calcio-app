@@ -54,47 +54,27 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con bandiere esplicite
+# Elenco delle competizioni con etichette chiare e descrittive
 campionati = {
-    "PL": {
-        "nome": "Premier League",
-        "bandiera": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-        "etichetta": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League",
-    },
-    "PD": {"nome": "La Liga", "bandiera": "🇪🇸", "etichetta": "🇪🇸 La Liga"},
-    "SA": {"nome": "Serie A", "bandiera": "🇮🇹", "etichetta": "🇮🇹 Serie A"},
-    "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪", "etichetta": "🇩🇪 Bundesliga"},
-    "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷", "etichetta": "🇫🇷 Ligue 1"},
-    "CL": {
-        "nome": "Champions League",
-        "bandiera": "🇪🇺",
-        "etichetta": "🇪🇺 Champions League",
-    },
-    "EL": {
-        "nome": "Europa League",
-        "bandiera": "🇪🇺",
-        "etichetta": "🇪🇺 Europa League",
-    },
-    "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱", "etichetta": "🇳🇱 Eredivisie"},
-    "PPL": {
-        "nome": "Primeira Liga",
-        "bandiera": "🇵🇹",
-        "etichetta": "🇵🇹 Primeira Liga",
-    },
-    "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷", "etichetta": "🇧🇷 Brasileirão"},
-    "CLI": {
-        "nome": "Copa Libertadores",
-        "bandiera": "🌎",
-        "etichetta": "🌎 Copa Libertadores",
-    },
-    "WC": {"nome": "World Cup", "bandiera": "🏆", "etichetta": "🏆 World Cup"},
+    "PL": {"nome": "Premier League", "codice_nazione": "[Inghilterra]"},
+    "PD": {"nome": "La Liga", "codice_nazione": "[Spagna]"},
+    "SA": {"nome": "Serie A", "codice_nazione": "[Italia]"},
+    "BL1": {"nome": "Bundesliga", "codice_nazione": "[Germania]"},
+    "FL1": {"nome": "Ligue 1", "codice_nazione": "[Francia]"},
+    "CL": {"nome": "Champions League", "codice_nazione": "[Europa]"},
+    "EL": {"nome": "Europa League", "codice_nazione": "[Europa]"},
+    "DED": {"nome": "Eredivisie", "codice_nazione": "[Paesi Bassi]"},
+    "PPL": {"nome": "Primeira Liga", "codice_nazione": "[Portogallo]"},
+    "BSA": {"nome": "Brasileirão", "codice_nazione": "[Brasile]"},
+    "CLI": {"nome": "Copa Libertadores", "codice_nazione": "[Sud America]"},
+    "WC": {"nome": "World Cup", "codice_nazione": "[Mondo]"},
 }
 
 st.markdown(
     """
     <div style="text-align: center; margin-bottom: 20px;">
         <h1>⚽ ⚽ ⚽ VIGANA Centro Analisi Calcio Pro ⚽ ⚽ ⚽</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner, Cartellini, Data/Ora e marcatori reali.</p>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), </p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -114,19 +94,48 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 with tab1:
-  st.subheader("🌍 Seleziona Più Campionati e Avvia l'Analisi Multi-Competizione")
+  st.subheader("🌍 Seleziona i Campionati e Avvia l'Analisi Multi-Competizione")
 
-  col1, col2 = st.columns([3, 1])
-  with col1:
-    camp_options = [(code, c["etichetta"]) for code, c in campionati.items()]
-    leghe_selezionate = st.multiselect(
-        "Seleziona uno o più campionati da analizzare:",
-        options=[opt[0] for opt in camp_options],
-        format_func=lambda x: next(opt[1] for opt in camp_options if opt[0] == x),
-        default=["SA"] if "SA" in campionati else [camp_options[0][0]],
-    )
+  # --- PANNELLO SELEZIONE CAMPIONATI TRAMITE GRIGLIA INTERATTIVA ---
+  st.markdown(
+      '<div class="dashboard-card"><div class="card-title">🏆 Seleziona Campionati'
+      " da Analizzare</div>",
+      unsafe_allow_html=True,
+  )
 
-  with col2:
+  if "leghe_selezionate_tab1" not in st.session_state:
+    st.session_state.leghe_selezionate_tab1 = ["SA"]
+
+  col_s1, col_s2, col_s3 = st.columns([1, 1, 3])
+  with col_s1:
+    if st.button("Seleziona Tutti", key="tutti_t1", use_container_width=True):
+      st.session_state.leghe_selezionate_tab1 = list(campionati.keys())
+      st.rerun()
+  with col_s2:
+    if st.button("Deseleziona Tutti", key="nessuno_t1", use_container_width=True):
+      st.session_state.leghe_selezionate_tab1 = []
+      st.rerun()
+
+  st.markdown("<br>", unsafe_allow_html=True)
+
+  grid_cols = st.columns(3)
+  leghe_scelte_temp = []
+  for i, (code, info) in enumerate(campionati.items()):
+    target_col = grid_cols[i % 3]
+    with target_col:
+      is_checked = st.checkbox(
+          f"{info['codice_nazione']} {info['nome']}",
+          value=code in st.session_state.leghe_selezionate_tab1,
+          key=f"chk_t1_{code}",
+      )
+      if is_checked:
+        leghe_scelte_temp.append(code)
+
+  st.session_state.leghe_selezionate_tab1 = leghe_scelte_temp
+  st.markdown("</div>", unsafe_allow_html=True)
+
+  col_storico, col_btn = st.columns([2, 2])
+  with col_storico:
     num_stagioni = st.selectbox(
         "Profondità storica:",
         options=[1, 2, 3, 4, 5],
@@ -138,11 +147,14 @@ with tab1:
         index=1,
     )
 
-  btn_analizza = st.button(
-      "📊 Avvia Analisi Selezionati", type="primary", use_container_width=True
-  )
+  with col_btn:
+    st.markdown("<br>", unsafe_allow_html=True)
+    btn_analizza = st.button(
+        "📊 AVVIA ANALISI SELEZIONATI", type="primary", use_container_width=True
+    )
 
   if btn_analizza:
+    leghe_selezionate = st.session_state.leghe_selezionate_tab1
     if not leghe_selezionate:
       st.warning("⚠️ Seleziona almeno un campionato prima di avviare l'analisi.")
     else:
@@ -152,9 +164,12 @@ with tab1:
 
       for idx, league_code in enumerate(leghe_selezionate):
         selezionato = campionati[league_code]
+        nome_completo = (
+            f"{selezionato['codice_nazione']} {selezionato['nome']}"
+        )
         progress_bar.progress(
             (idx + 1) / tot_leghe,
-            text=f"Analisi in corso per {selezionato['etichetta']}...",
+            text=f"Analisi in corso per {nome_completo}...",
         )
 
         partite_finite_totali = []
@@ -423,7 +438,7 @@ with tab1:
           miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
 
           diz_partita = {
-              "Campionato": selezionato["etichetta"],
+              "Campionato": nome_completo,
               "Codice": league_code,
               "📅 Data e Ora": data_ora_formattata,
               "Incontro": f"{casa} - {ospite}",
@@ -487,7 +502,6 @@ with tab2:
         set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
 
-    # --- PANNELLO FILTRI CON BANDIERINE (CARD 1) ---
     st.markdown(
         '<div class="dashboard-card"><div class="card-title">🏆 Seleziona i'
         " Campionati da Giocare</div>",
@@ -499,13 +513,15 @@ with tab2:
 
     col_sel1, col_sel2, col_sel3 = st.columns([1, 1, 3])
     with col_sel1:
-      if st.button("Seleziona Tutti", use_container_width=True):
+      if st.button("Seleziona Tutti", key="tutti_t2", use_container_width=True):
         st.session_state.campionati_selezionati_pro = (
             campionati_disponibili.copy()
         )
         st.rerun()
     with col_sel2:
-      if st.button("Deseleziona Tutti", use_container_width=True):
+      if st.button(
+          "Deseleziona Tutti", key="nessuno_t2", use_container_width=True
+      ):
         st.session_state.campionati_selezionati_pro = []
         st.rerun()
 
@@ -527,7 +543,6 @@ with tab2:
     st.session_state.campionati_selezionati_pro = campionati_scelti
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- PANNELLO MERCATI E BUDGET (CARD 2) ---
     st.markdown(
         '<div class="dashboard-card"><div class="card-title">⚙️ Parametri &'
         " Mercati di Gioco</div>",
@@ -578,7 +593,6 @@ with tab2:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- TASTO CENTRALE GENERAZIONE SCHEDINA ---
     col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
     with col_b2:
       btn_genera = st.button(
@@ -635,7 +649,6 @@ with tab2:
 
       st.session_state.schedina_generata = selezioni_schedina
 
-    # --- VISUALIZZAZIONE SCHEDINA ---
     if st.session_state.schedina_generata is not None:
       selezioni_schedina = st.session_state.schedina_generata
       if selezioni_schedina:
@@ -685,6 +698,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Analizza i campionati desiderati con le relative bandiere nazionali ben visibili.
-    * **Tab 2:** Scegli i campionati e i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
+    * **Tab 1:** Seleziona i campionati desiderati tramite la comoda griglia a schede (con indicatori nazionali chiari e puliti) e avvia l'analisi.
+    * **Tab 2:** Scegli i campionati e i mercati desiderati, imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
     """)
