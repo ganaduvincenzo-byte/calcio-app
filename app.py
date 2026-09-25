@@ -35,19 +35,23 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
+# Elenco aggiornato ed esclusivo delle 12 competizioni coperte dal Free Tier dell'API
 campionati = {
-    "SA": {"nome": "Campionato Italiano (Serie A)", "bandiera": "🇮🇹"},
     "PL": {"nome": "Campionato Inglese (Premier League)", "bandiera": "🇬🇧"},
     "PD": {"nome": "Campionato Spagnolo (La Liga)", "bandiera": "🇪🇸"},
+    "SA": {"nome": "Campionato Italiano (Serie A)", "bandiera": "🇮🇹"},
     "BL1": {"nome": "Campionato Tedesco (Bundesliga)", "bandiera": "🇩🇪"},
     "FL1": {"nome": "Campionato Francese (Ligue 1)", "bandiera": "🇫🇷"},
     "CL": {"nome": "UEFA Champions League", "bandiera": "🇪🇺"},
     "EL": {"nome": "UEFA Europa League", "bandiera": "🇪🇺"},
-    "ECL": {"nome": "UEFA Conference League", "bandiera": "🇪🇺"},
-    "UNL": {"nome": "UEFA Nations League", "bandiera": "🏆"},
+    "DED": {"nome": "Eredivisie (Paesi Bassi)", "bandiera": "🇳🇱"},
+    "PPL": {"nome": "Primeira Liga (Portogallo)", "bandiera": "🇵🇹"},
+    "BSA": {"nome": "Campeonato Brasileiro Série A", "bandiera": "🇧🇷"},
+    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎"},
+    "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
 }
 
-st.title("⚽ Centro Analisi Calcio Pro")
+st.title("⚽ Viganà Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -120,7 +124,6 @@ with tab1:
 
       anno_corrente = datetime.datetime.now().year
 
-      # Chiamata API reale senza dati inventati
       url_base = (
           f"https://api.football-data.org/v4/competitions/{league_code}/matches"
       )
@@ -176,7 +179,6 @@ with tab1:
       except Exception:
         pass
 
-      # Filtraggio delle sole partite future reali
       matchday_list = []
       if tutti_corrente:
         future_matches = [
@@ -456,4 +458,72 @@ with tab1:
 
 with tab2:
   st.subheader("🎟️ Generatore Schedina Intelligente e Personalizzabile")
-  # (Il resto del codice resta invariato)
+
+  if not st.session_state.archivio_partite_globali:
+    st.info(
+        "💡 Analizza almeno un campionato nella scheda 'Analisi Turno &"
+        " Giocatori' per popolare la schedina."
+    )
+  else:
+    col_s1, col_s2, col_s3 = st.columns(3)
+    with col_s1:
+      num_eventi = st.slider("Numero di eventi in schedina:", 1, 10, 3)
+    with col_s2:
+      quota_min = st.number_input("Quota minima per evento:", 1.10, 3.00, 1.30)
+    with col_s3:
+      budget = st.number_input("Budget puntata (€):", 1.00, 1000.00, 10.00)
+
+    if st.button("🎲 Genera Schedina Vincente", type="primary"):
+      partite_disponibili = list(st.session_state.archivio_partite_globali)
+      import random
+
+      random.shuffle(partite_disponibili)
+
+      selezioni_schedina = []
+      for p in partite_disponibili:
+        if len(selezioni_schedina) >= num_eventi:
+          break
+        mercato_top = p["_miglior_mercato"]
+        prob_top = p["_miglior_prob"]
+        quota_stimata = round(
+            max(1.05, min(3.50, (1.0 / max(0.05, prob_top)) * 0.92)), 2
+        )
+
+        if quota_stimata >= quota_min:
+          selezioni_schedina.append({
+              "Incontro": p["Incontro"],
+              "Data e Ora": p["📅 Data e Ora"],
+              "Pronostico": mercato_top,
+              "Probabilità": f"{prob_top * 100:.1f}%",
+              "Quota Stimata": quota_stimata,
+          })
+
+      if selezioni_schedina:
+        df_schedina = pd.DataFrame(selezioni_schedina)
+        st.markdown("### 🎫 La tua Schedina Consigliata")
+        st.dataframe(df_schedina, use_container_width=True)
+
+        quota_totale = 1.0
+        for s in selezioni_schedina:
+          quota_totale *= s["Quota Stimata"]
+
+        vincita_potenziale = budget * quota_totale
+        st.success(
+            f"📊 **Quota Totale Combinata:** **{quota_totale:.2f}** | 💰"
+            f" **Vincita Potenziale:** **{vincita_potenziale:.2f} €**"
+        )
+      else:
+        st.warning(
+            "⚠️ Nessun evento soddisfa i filtri selezionati. Prova ad abbassare"
+            " la quota minima o ad analizzare altri campionati."
+        )
+
+with tab3:
+  st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
+  st.markdown("""
+    Benvenuto nel **Centro Analisi Calcio Pro**. Questa applicazione ti permette di analizzare le partite ufficiali dei campionati supportati sfruttando modelli statistici avanzati (Poisson, stime di xG storiche, corner, cartellini e marcatori).
+    
+    * **Tab 1 (Analisi Turno & Giocatori):** Scegli una delle competizioni ufficiali dell'API, seleziona la profondità storica desiderata (da 1 a 5 anni per calcoli più accurati) e clicca su *Avvia Analisi*.
+    * **Tab 2 (Schedina Vincente):** Configura i tuoi parametri e genera automaticamente una combinazione di scommesse basata sulle probabilità più alte calcolate dal sistema.
+    * **Competizioni Supportate:** Sono incluse tutte le competizioni del piano gratuito ufficiale di *football-data.org* (Premier League, Serie A, Liga, Bundesliga, Ligue 1, Champions League, Europa League, Eredivisie, Primeira Liga, Brasileirão, Copa Libertadores e Mondiali).
+    """)
