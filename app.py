@@ -51,7 +51,7 @@ campionati = {
     "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
 }
 
-st.title("⚽ Viganà Analisi Calcio Pro ⚽")
+st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -179,19 +179,36 @@ with tab1:
       except Exception:
         pass
 
+      # Filtraggio rigoroso delle sole partite future reali (escludendo quelle passate)
       matchday_list = []
       if tutti_corrente:
-        future_matches = [
-            m
-            for m in tutti_corrente
-            if m.get("status") in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]
-        ]
-        if future_matches:
-          primo_matchday_futuro = future_matches[0].get("matchday")
+        ora_attuale = datetime.datetime.utcnow()
+        partite_future_reali = []
+
+        for m in tutti_corrente:
+          status = m.get("status")
+          utc_date_str = m.get("utcDate")
+
+          if status in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]:
+            if utc_date_str:
+              try:
+                dt_utc = datetime.datetime.strptime(
+                    utc_date_str.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+                )
+                if dt_utc >= ora_attuale - datetime.timedelta(hours=3):
+                  partite_future_reali.append(m)
+              except Exception:
+                pass
+            else:
+              partite_future_reali.append(m)
+
+        if partite_future_reali:
+          primo_matchday_futuro = partite_future_reali[0].get("matchday")
           matchday_list = [
               m
               for m in tutti_corrente
               if m.get("matchday") == primo_matchday_futuro
+              and m.get("status") not in ["FINISHED"]
           ]
         else:
           matchday_list = []
