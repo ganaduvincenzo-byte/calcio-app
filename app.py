@@ -54,19 +54,39 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle 12 competizioni coperte dal Free Tier dell'API con bandiere formattate
+# Elenco delle competizioni con bandiere esplicite
 campionati = {
-    "PL": {"nome": "Premier League", "bandiera": "🇬🇧", "etichetta": "🇬🇧 Premier League"},
+    "PL": {
+        "nome": "Premier League",
+        "bandiera": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+        "etichetta": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League",
+    },
     "PD": {"nome": "La Liga", "bandiera": "🇪🇸", "etichetta": "🇪🇸 La Liga"},
     "SA": {"nome": "Serie A", "bandiera": "🇮🇹", "etichetta": "🇮🇹 Serie A"},
     "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪", "etichetta": "🇩🇪 Bundesliga"},
     "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷", "etichetta": "🇫🇷 Ligue 1"},
-    "CL": {"nome": "Champions League", "bandiera": "🇪🇺", "etichetta": "🇪🇺 Champions League"},
-    "EL": {"nome": "Europa League", "bandiera": "🇪🇺", "etichetta": "🇪🇺 Europa League"},
+    "CL": {
+        "nome": "Champions League",
+        "bandiera": "🇪🇺",
+        "etichetta": "🇪🇺 Champions League",
+    },
+    "EL": {
+        "nome": "Europa League",
+        "bandiera": "🇪🇺",
+        "etichetta": "🇪🇺 Europa League",
+    },
     "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱", "etichetta": "🇳🇱 Eredivisie"},
-    "PPL": {"nome": "Primeira Liga", "bandiera": "🇵🇹", "etichetta": "🇵🇹 Primeira Liga"},
+    "PPL": {
+        "nome": "Primeira Liga",
+        "bandiera": "🇵🇹",
+        "etichetta": "🇵🇹 Primeira Liga",
+    },
     "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷", "etichetta": "🇧🇷 Brasileirão"},
-    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎", "etichetta": "🌎 Copa Libertadores"},
+    "CLI": {
+        "nome": "Copa Libertadores",
+        "bandiera": "🌎",
+        "etichetta": "🌎 Copa Libertadores",
+    },
     "WC": {"nome": "World Cup", "bandiera": "🏆", "etichetta": "🏆 World Cup"},
 }
 
@@ -665,6 +685,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Analizza i campionati desiderati (con le relative bandierine nazionali) caricando i dati storici e le giornate correnti.
-    * **Tab 2:** Scegli i campionati tramite i comodi box interattivi con le bandiere, seleziona i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
+    * **Tab 1:** Analizza i campionati desiderati con le relative bandiere nazionali ben visibili.
+    * **Tab 2:** Scegli i campionati e i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
     """)
