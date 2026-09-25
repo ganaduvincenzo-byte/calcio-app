@@ -1,3 +1,4 @@
+import datetime
 import math
 import pandas as pd
 import requests
@@ -81,7 +82,6 @@ with tab1:
   selezionato = campionati[league_code]
 
   with col2:
-    # Selezione profondità storica (Anni precedenti)
     num_stagioni = st.selectbox(
         "Profondità storica:",
         options=[1, 2, 3],
@@ -90,7 +90,7 @@ with tab1:
             if x == 1
             else f"Corrente + {x-1} Anni Prec."
         ),
-        index=1,  # Default a 2 stagioni per avere un'ottima base statistica
+        index=1,
     )
 
   with col3:
@@ -105,15 +105,17 @@ with tab1:
         f"⏳ Raccolta dati storici ({num_stagioni} stagioni) per"
         f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
-      # Raccogliamo le partite finite di N stagioni
-      # Anno di inizio standard corrente stimato al 2025 o 2026 a seconda del calendario calcistico
-      # Usiamo gli anni di partenza recenti (es. 2025, 2024, 2023)
-      anni_base = [2025, 2024, 2023, 2022]
+      # Determina l'anno di inizio stagione corrente in base al mese (es. se siamo da luglio in poi, la stagione è iniziata quest'anno, altrimenti l'anno scorso)
+      oggi = datetime.date.today()
+      anno_corrente = (
+          oggi.year if oggi.month >= 7 else oggi.year - 1
+      )  # Es. Settembre 2026 -> stagione 2026
+
       partite_finite_totali = []
       partite_future = []
 
       for i in range(num_stagioni):
-        anno_stagione = anni_base[i] if i < len(anni_base) else (2025 - i)
+        anno_stagione = anno_corrente - i
         url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_stagione}"
         try:
           resp_season = requests.get(url_season, headers=headers)
@@ -126,7 +128,6 @@ with tab1:
             ]
             partite_finite_totali.extend(m_fin)
 
-            # Prendiamo le partite future solo dalla chiamata della stagione corrente (la prima iterazione)
             if i == 0:
               partite_future = [
                   m
@@ -136,8 +137,8 @@ with tab1:
         except Exception:
           pass
 
-      # Fallback se la chiamata stagionale fallisce o non ritorna nulla
-      if not partite_finite_totali:
+      # Fallback generale senza parametro di stagione se l'API non risponde correttamente con l'anno
+      if not partite_finite_totali and not partite_future:
         url_matches = (
             f"https://api.football-data.org/v4/competitions/{league_code}/matches"
         )
@@ -184,7 +185,6 @@ with tab1:
           casa = match["homeTeam"]["name"]
           ospite = match["awayTeam"]["name"]
 
-          # Statistiche storiche specifiche della squadra di casa (su tutte le stagioni caricate)
           p_casa = [
               m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
           ]
@@ -195,7 +195,6 @@ with tab1:
               else media_casa
           )
 
-          # Statistiche storiche specifiche della squadra ospite (su tutte le stagioni caricate)
           p_ospite = [
               m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
           ]
@@ -328,7 +327,10 @@ with tab1:
         )
         st.rerun()
       else:
-        st.warning("⚠️ Nessuna partita futura o dato storico trovato.")
+        st.warning(
+            "⚠️ Nessuna partita futura o dato storico trovato per questo"
+            " campionato in questo periodo."
+        )
 
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
