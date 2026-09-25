@@ -7,7 +7,7 @@ import streamlit as st
 
 # Configurazione della pagina Streamlit
 st.set_page_config(
-    page_title="Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
+    page_title="VIGANA Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
 # Stili CSS avanzati per un look super figo, moderno e accattivante
@@ -29,7 +29,6 @@ st.markdown(
         color: white !important;
         border-bottom: none;
     }
-    /* Card design moderna */
     .dashboard-card {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         padding: 25px;
@@ -55,27 +54,30 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle 12 competizioni coperte dal Free Tier dell'API
+# Elenco delle 12 competizioni coperte dal Free Tier dell'API con bandiere formattate
 campionati = {
-    "PL": {"nome": "Premier League", "bandiera": "🇬🇧", "chiave": "Inghilterra"},
-    "PD": {"nome": "La Liga", "bandiera": "🇪🇸", "chiave": "Spagna"},
-    "SA": {"nome": "Serie A", "bandiera": "🇮🇹", "chiave": "Italia"},
-    "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪", "chiave": "Germania"},
-    "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷", "chiave": "Francia"},
-    "CL": {"nome": "Champions League", "bandiera": "🇪🇺", "chiave": "Europa"},
-    "EL": {"nome": "Europa League", "bandiera": "🇪🇺", "chiave": "Europa"},
-    "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱", "chiave": "Paesi Bassi"},
-    "PPL": {"nome": "Primeira Liga", "bandiera": "🇵🇹", "chiave": "Portogallo"},
-    "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷", "chiave": "Brasile"},
-    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎", "chiave": "Sud America"},
-    "WC": {"nome": "World Cup", "bandiera": "🏆", "chiave": "Mondo"},
+    "PL": {"nome": "Premier League", "bandiera": "🇬🇧", "etichetta": "🇬🇧 Premier League"},
+    "PD": {"nome": "La Liga", "bandiera": "🇪🇸", "etichetta": "🇪🇸 La Liga"},
+    "SA": {"nome": "Serie A", "bandiera": "🇮🇹", "etichetta": "🇮🇹 Serie A"},
+    "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪", "etichetta": "🇩🇪 Bundesliga"},
+    "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷", "etichetta": "🇫🇷 Ligue 1"},
+    "CL": {"nome": "Champions League", "bandiera": "🇪🇺", "etichetta": "🇪🇺 Champions League"},
+    "EL": {"nome": "Europa League", "bandiera": "🇪🇺", "etichetta": "🇪🇺 Europa League"},
+    "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱", "etichetta": "🇳🇱 Eredivisie"},
+    "PPL": {"nome": "Primeira Liga", "bandiera": "🇵🇹", "etichetta": "🇵🇹 Primeira Liga"},
+    "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷", "etichetta": "🇧🇷 Brasileirão"},
+    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎", "etichetta": "🌎 Copa Libertadores"},
+    "WC": {"nome": "World Cup", "bandiera": "🏆", "etichetta": "🏆 World Cup"},
 }
 
-st.title("⚽⚽⚽ VIGANA Centro Analisi Calcio Pro ⚽⚽⚽")
 st.markdown(
-    "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
-    " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
-    " Cartellini, Data/Ora e marcatori reali."
+    """
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1>⚽ ⚽ ⚽ VIGANA Centro Analisi Calcio Pro ⚽ ⚽ ⚽</h1>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner, Cartellini, Data/Ora e marcatori reali.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 st.markdown("---")
 
@@ -92,15 +94,11 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 with tab1:
-  st.subheader(
-      "🌍 Seleziona Più Campionati e Avvia l'Analisi Multi-Competizione"
-  )
+  st.subheader("🌍 Seleziona Più Campionati e Avvia l'Analisi Multi-Competizione")
 
   col1, col2 = st.columns([3, 1])
   with col1:
-    camp_options = [
-        (code, f"{c['bandiera']} {c['nome']}") for code, c in campionati.items()
-    ]
+    camp_options = [(code, c["etichetta"]) for code, c in campionati.items()]
     leghe_selezionate = st.multiselect(
         "Seleziona uno o più campionati da analizzare:",
         options=[opt[0] for opt in camp_options],
@@ -136,16 +134,14 @@ with tab1:
         selezionato = campionati[league_code]
         progress_bar.progress(
             (idx + 1) / tot_leghe,
-            text=f"Analisi in corso per {selezionato['bandiera']} {selezionato['nome']}...",
+            text=f"Analisi in corso per {selezionato['etichetta']}...",
         )
 
         partite_finite_totali = []
         tutti_corrente = []
         marcatori_per_squadra = {}
         anno_corrente = datetime.datetime.now().year
-        url_base = (
-            f"https://api.football-data.org/v4/competitions/{league_code}/matches"
-        )
+        url_base = f"https://api.football-data.org/v4/competitions/{league_code}/matches"
 
         try:
           resp_base = requests.get(url_base, headers=headers, timeout=10)
@@ -153,9 +149,7 @@ with tab1:
             tutti_corrente = resp_base.json().get("matches", [])
           if not tutti_corrente:
             resp_curr = requests.get(
-                f"{url_base}?season={anno_corrente}",
-                headers=headers,
-                timeout=10,
+                f"{url_base}?season={anno_corrente}", headers=headers, timeout=10
             )
             if resp_curr.status_code == 200:
               tutti_corrente = resp_curr.json().get("matches", [])
@@ -409,7 +403,7 @@ with tab1:
           miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
 
           diz_partita = {
-              "Campionato": f"{selezionato['bandiera']} {selezionato['nome']}",
+              "Campionato": selezionato["etichetta"],
               "Codice": league_code,
               "📅 Data e Ora": data_ora_formattata,
               "Incontro": f"{casa} - {ospite}",
@@ -473,7 +467,7 @@ with tab2:
         set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
 
-    # --- PANNELLO FILTRI SUPER FIGO (CARD 1: SELEZIONE CAMPIONATI INTERATTIVA) ---
+    # --- PANNELLO FILTRI CON BANDIERINE (CARD 1) ---
     st.markdown(
         '<div class="dashboard-card"><div class="card-title">🏆 Seleziona i'
         " Campionati da Giocare</div>",
@@ -483,7 +477,6 @@ with tab2:
     if "campionati_selezionati_pro" not in st.session_state:
       st.session_state.campionati_selezionati_pro = campionati_disponibili.copy()
 
-    # Pulsanti di scelta rapida
     col_sel1, col_sel2, col_sel3 = st.columns([1, 1, 3])
     with col_sel1:
       if st.button("Seleziona Tutti", use_container_width=True):
@@ -498,7 +491,6 @@ with tab2:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Griglia interattiva di checkbox per i campionati
     camp_cols = st.columns(3)
     campionati_scelti = []
     for i, camp in enumerate(campionati_disponibili):
@@ -515,7 +507,7 @@ with tab2:
     st.session_state.campionati_selezionati_pro = campionati_scelti
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- PANNELLO FILTRI (CARD 2: MERCATI, EVENTI E BUDGET) ---
+    # --- PANNELLO MERCATI E BUDGET (CARD 2) ---
     st.markdown(
         '<div class="dashboard-card"><div class="card-title">⚙️ Parametri &'
         " Mercati di Gioco</div>",
@@ -613,6 +605,7 @@ with tab2:
           )
 
           selezioni_schedina.append({
+              "Campionato": p["Campionato"],
               "Incontro": p["Incontro"],
               "Data e Ora": p["📅 Data e Ora"],
               "Pronostico": mercato_scelto,
@@ -671,7 +664,7 @@ with tab2:
 with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
-    Benvenuto nel **Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Analizza i campionati desiderati caricando i dati storici e le giornate correnti.
-    * **Tab 2:** Scegli i campionati tramite i comodi box interattivi, seleziona i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
+    Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
+    * **Tab 1:** Analizza i campionati desiderati (con le relative bandierine nazionali) caricando i dati storici e le giornate correnti.
+    * **Tab 2:** Scegli i campionati tramite i comodi box interattivi con le bandiere, seleziona i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
     """)
