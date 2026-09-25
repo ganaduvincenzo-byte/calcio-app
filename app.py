@@ -10,32 +10,42 @@ st.set_page_config(
     page_title="Centro Analisi Calcio Pro", page_icon="⚽", layout="wide"
 )
 
-# Stili CSS avanzati per un look moderno, pulito e curato nei dettagli
+# Stili CSS avanzati per un look super figo, moderno e accattivante
 st.markdown(
     """
 <style>
-    .main { background-color: #f8f9fa; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .main { background-color: #0f172a; color: #f8fafc; }
+    .stTabs [data-baseweb="tab-list"] { gap: 12px; }
     .stTabs [data-baseweb="tab"] {
-        background-color: #ffffff;
-        border-radius: 8px 8px 0px 0px;
-        padding: 10px 20px;
+        background-color: #1e293b;
+        border-radius: 10px 10px 0px 0px;
+        padding: 12px 24px;
         font-weight: 600;
-        color: #2c3e50;
-        border: 1px solid #e0e0e0;
+        color: #94a3b8;
+        border: 1px solid #334155;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #1abc9c !important;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
         color: white !important;
+        border-bottom: none;
     }
-    /* Stile personalizzato per i container di configurazione schedina */
-    .filter-card {
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        margin-bottom: 20px;
+    /* Card design moderna */
+    .dashboard-card {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid #334155;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        margin-bottom: 25px;
+    }
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #38bdf8;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 </style>
 """,
@@ -47,21 +57,21 @@ headers = {"X-Auth-Token": API_KEY}
 
 # Elenco delle 12 competizioni coperte dal Free Tier dell'API
 campionati = {
-    "PL": {"nome": "Campionato Inglese (Premier League)", "bandiera": "🇬🇧"},
-    "PD": {"nome": "Campionato Spagnolo (La Liga)", "bandiera": "🇪🇸"},
-    "SA": {"nome": "Campionato Italiano (Serie A)", "bandiera": "🇮🇹"},
-    "BL1": {"nome": "Campionato Tedesco (Bundesliga)", "bandiera": "🇩🇪"},
-    "FL1": {"nome": "Campionato Francese (Ligue 1)", "bandiera": "🇫🇷"},
-    "CL": {"nome": "UEFA Champions League", "bandiera": "🇪🇺"},
-    "EL": {"nome": "UEFA Europa League", "bandiera": "🇪🇺"},
-    "DED": {"nome": "Eredivisie (Paesi Bassi)", "bandiera": "🇳🇱"},
-    "PPL": {"nome": "Primeira Liga (Portogallo)", "bandiera": "🇵🇹"},
-    "BSA": {"nome": "Campeonato Brasileiro Série A", "bandiera": "🇧🇷"},
-    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎"},
-    "WC": {"nome": "FIFA World Cup", "bandiera": "🏆"},
+    "PL": {"nome": "Premier League", "bandiera": "🇬🇧", "chiave": "Inghilterra"},
+    "PD": {"nome": "La Liga", "bandiera": "🇪🇸", "chiave": "Spagna"},
+    "SA": {"nome": "Serie A", "bandiera": "🇮🇹", "chiave": "Italia"},
+    "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪", "chiave": "Germania"},
+    "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷", "chiave": "Francia"},
+    "CL": {"nome": "Champions League", "bandiera": "🇪🇺", "chiave": "Europa"},
+    "EL": {"nome": "Europa League", "bandiera": "🇪🇺", "chiave": "Europa"},
+    "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱", "chiave": "Paesi Bassi"},
+    "PPL": {"nome": "Primeira Liga", "bandiera": "🇵🇹", "chiave": "Portogallo"},
+    "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷", "chiave": "Brasile"},
+    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎", "chiave": "Sud America"},
+    "WC": {"nome": "World Cup", "bandiera": "🏆", "chiave": "Mondo"},
 }
 
-st.title("⚽ Centro Analisi Calcio Pro")
+st.title("⚽⚽⚽ VIGANA Centro Analisi Calcio Pro ⚽⚽⚽")
 st.markdown(
     "Piattaforma professionale con analisi multi-stagione (fino a 5 anni),"
     " Risultato Esatto, Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori, Corner,"
@@ -78,7 +88,7 @@ if "schedina_generata" not in st.session_state:
 
 # --- CREAZIONE DELLE SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(
-    ["📊 Analisi Turno & Giocatori", "🎟️ Schedina Vincente", "ℹ️ Info & Guide"]
+    ["📊 Analisi Turno & Giocatori", "🎟️ Schedina Vincente Pro", "ℹ️ Info & Guide"]
 )
 
 with tab1:
@@ -293,7 +303,7 @@ with tab1:
           )
 
           prob_1, prob_x, prob_2 = 0, 0, 0
-          prob_over15, prob_over25 = 0, 0
+          prob_over15, prob_over25, prob_over35, prob_over45 = 0, 0, 0, 0
           prob_gol = 0
           max_p_risultato = -1
           risultato_esatto = "1-1"
@@ -310,15 +320,22 @@ with tab1:
                 prob_x += p
               else:
                 prob_2 += p
-              if g_casa + g_ospite > 1.5:
+              tot_g = g_casa + g_ospite
+              if tot_g > 1.5:
                 prob_over15 += p
-              if g_casa + g_ospite > 2.5:
+              if tot_g > 2.5:
                 prob_over25 += p
+              if tot_g > 3.5:
+                prob_over35 += p
+              if tot_g > 4.5:
+                prob_over45 += p
               if g_casa > 0 and g_ospite > 0:
                 prob_gol += p
 
           prob_under15 = 1.0 - prob_over15
           prob_under25 = 1.0 - prob_over25
+          prob_under35 = 1.0 - prob_over35
+          prob_under45 = 1.0 - prob_over45
           prob_nogol = 1.0 - prob_gol
           prob_gol_1t = 1 - (
               poisson(xg_c * 0.42, 0) * poisson(xg_o * 0.42, 0)
@@ -361,6 +378,10 @@ with tab1:
               {"mercato": "Under 1.5", "prob": clamp(prob_under15)},
               {"mercato": "Over 2.5", "prob": clamp(prob_over25)},
               {"mercato": "Under 2.5", "prob": clamp(prob_under25)},
+              {"mercato": "Over 3.5", "prob": clamp(prob_over35)},
+              {"mercato": "Under 3.5", "prob": clamp(prob_under35)},
+              {"mercato": "Over 4.5", "prob": clamp(prob_over45)},
+              {"mercato": "Under 4.5", "prob": clamp(prob_under45)},
               {"mercato": "Gol", "prob": clamp(prob_gol)},
               {"mercato": "No Gol", "prob": clamp(prob_nogol)},
               {"mercato": "Gol 1°T Sì", "prob": clamp(prob_gol_1t)},
@@ -396,18 +417,13 @@ with tab1:
               "1 (%)": f"{prob_1 * 100:.1f}%",
               "X (%)": f"{prob_x * 100:.1f}%",
               "2 (%)": f"{prob_2 * 100:.1f}%",
-              "Over 1.5 (%)": f"{prob_over15 * 100:.1f}%",
               "Over 2.5 (%)": f"{prob_over25 * 100:.1f}%",
+              "Under 2.5 (%)": f"{prob_under25 * 100:.1f}%",
               "Gol (%)": f"{prob_gol * 100:.1f}%",
               "No Gol (%)": f"{prob_nogol * 100:.1f}%",
-              "Gol 1°T (%)": f"{prob_gol_1t * 100:.1f}%",
-              "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
               "Corner": stimacorner,
               "Cartellini": stima_cartellini,
               "🔍 Marcatore Probabile": f"⚽ {marcatore_casa} / {marcatore_ospite}",
-              "⚠️ Rischio Cartellini": (
-                  "Alto" if stima_cartellini > 4.5 else "Moderato"
-              ),
               "_miglior_mercato": miglior_scelta["mercato"],
               "_miglior_prob": miglior_scelta["prob"],
               "_tutti_i_mercati": mercati_partita,
@@ -440,35 +456,81 @@ with tab1:
     st.dataframe(df_report[display_cols], use_container_width=True)
 
 with tab2:
-  st.subheader("🎟️ Generatore Schedina Intelligente e Personalizzabile")
+  st.markdown(
+      '<p style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; text-align:'
+      ' center; margin-bottom: 20px;">🎟️ Schedina Vincente Pro - Generatore'
+      " Intelligente</p>",
+      unsafe_allow_html=True,
+  )
 
   if not st.session_state.archivio_partite_globali:
     st.info(
-        "💡 Analizza almeno un campionato nella scheda 'Analisi Turno &"
-        " Giocatori' per popolare la schedina."
+        "💡 Per generare la schedina, avvia prima l'analisi dei campionati nella"
+        " scheda 'Analisi Turno & Giocatori'."
     )
   else:
-    campionati_presenti = list(
+    campionati_disponibili = list(
         set([p["Campionato"] for p in st.session_state.archivio_partite_globali])
     )
 
-    # --- SEZIONE FILTRI GRAFICA RINNOVATA (CARD DESIGN) ---
-    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
-    st.markdown("#### ⚙️ Configurazione Filtri Schedina")
+    # --- PANNELLO FILTRI SUPER FIGO (CARD 1: SELEZIONE CAMPIONATI INTERATTIVA) ---
+    st.markdown(
+        '<div class="dashboard-card"><div class="card-title">🏆 Seleziona i'
+        " Campionati da Giocare</div>",
+        unsafe_allow_html=True,
+    )
 
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-      campionati_scelti = st.multiselect(
-          "🏆 Seleziona Campionati:",
-          options=campionati_presenti,
-          default=campionati_presenti,
-      )
+    if "campionati_selezionati_pro" not in st.session_state:
+      st.session_state.campionati_selezionati_pro = campionati_disponibili.copy()
+
+    # Pulsanti di scelta rapida
+    col_sel1, col_sel2, col_sel3 = st.columns([1, 1, 3])
+    with col_sel1:
+      if st.button("Seleziona Tutti", use_container_width=True):
+        st.session_state.campionati_selezionati_pro = (
+            campionati_disponibili.copy()
+        )
+        st.rerun()
+    with col_sel2:
+      if st.button("Deseleziona Tutti", use_container_width=True):
+        st.session_state.campionati_selezionati_pro = []
+        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Griglia interattiva di checkbox per i campionati
+    camp_cols = st.columns(3)
+    campionati_scelti = []
+    for i, camp in enumerate(campionati_disponibili):
+      col_target = camp_cols[i % 3]
+      with col_target:
+        checked = st.checkbox(
+            camp,
+            value=camp in st.session_state.campionati_selezionati_pro,
+            key=f"chk_camp_{i}",
+        )
+        if checked:
+          campionati_scelti.append(camp)
+
+    st.session_state.campionati_selezionati_pro = campionati_scelti
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- PANNELLO FILTRI (CARD 2: MERCATI, EVENTI E BUDGET) ---
+    st.markdown(
+        '<div class="dashboard-card"><div class="card-title">⚙️ Parametri &'
+        " Mercati di Gioco</div>",
+        unsafe_allow_html=True,
+    )
 
     tutti_i_mercati_possibili = [
         "Over 1.5",
         "Under 1.5",
         "Over 2.5",
         "Under 2.5",
+        "Over 3.5",
+        "Under 3.5",
+        "Over 4.5",
+        "Under 4.5",
         "Gol",
         "No Gol",
         "Gol 1°T Sì",
@@ -483,40 +545,35 @@ with tab2:
         "Marcatore Si",
     ]
 
-    with col_f2:
+    col_m1, col_m2 = st.columns([2, 1])
+    with col_m1:
       mercati_selezionati = st.multiselect(
-          "🎯 Scegli Opzioni di Mercato:",
+          "🎯 Scegli i mercati preferiti (Over, Under, Gol, 1X2, ecc.):",
           options=tutti_i_mercati_possibili,
-          default=["Over 1.5", "Gol"],
+          default=["Over 1.5", "Under 2.5", "Gol"],
       )
 
-    col_f3, col_f4 = st.columns(2)
-    with col_f3:
-      num_eventi = st.number_input(
-          "🔢 Numero di eventi in schedina:",
+    with col_m2:
+      num_eventi = st.slider(
+          "🔢 Numero Eventi:",
           min_value=1,
           max_value=max(1, len(st.session_state.archivio_partite_globali)),
           value=min(5, len(st.session_state.archivio_partite_globali)),
       )
-
-    with col_f4:
       budget = st.number_input(
-          "💰 Budget puntata (€):",
-          min_value=1.00,
-          max_value=1000.00,
-          value=5.00,
+          "💰 Budget (€):", min_value=1.00, max_value=1000.00, value=10.00
       )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- TASTINO CENTRALE DEDICATO "GENERA SCHEDINA" ---
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
-      btn_genera_schedina = st.button(
-          "🚀 Genera Schedina", type="primary", use_container_width=True
+    # --- TASTO CENTRALE GENERAZIONE SCHEDINA ---
+    col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
+    with col_b2:
+      btn_genera = st.button(
+          "🚀 GENERA SCHEDINA VINCENTE", type="primary", use_container_width=True
       )
 
-    if btn_genera_schedina:
+    if btn_genera:
       partite_filtrate = [
           p
           for p in st.session_state.archivio_partite_globali
@@ -565,12 +622,17 @@ with tab2:
 
       st.session_state.schedina_generata = selezioni_schedina
 
-    # Mostra la schedina se è stata generata in questa sessione
+    # --- VISUALIZZAZIONE SCHEDINA ---
     if st.session_state.schedina_generata is not None:
       selezioni_schedina = st.session_state.schedina_generata
       if selezioni_schedina:
-        st.markdown("---")
-        st.markdown("### 📋 La tua Schedina Consigliata")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(
+            '<div class="dashboard-card"><div'
+            ' class="card-title">📊 Risultato Schedina Elaborata</div>',
+            unsafe_allow_html=True,
+        )
+
         df_schedina = pd.DataFrame(selezioni_schedina)
         st.dataframe(df_schedina, use_container_width=True)
 
@@ -580,14 +642,30 @@ with tab2:
 
         vincita_potenziale = budget * quota_totale
 
-        st.success(
-            f"📊 **Quota Totale Combinata:** {quota_totale:.2f} | 💰 **Vincita"
-            f" Potenziale:** {vincita_potenziale:.2f} €"
+        st.markdown(
+            f"""
+                <div style="display: flex; justify-content: space-around; background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #3b82f6; margin-top: 15px; text-align: center;">
+                    <div>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">QUOTA TOTALE</p>
+                        <p style="color: #38bdf8; font-size: 1.8rem; font-weight: 800; margin: 0;">{quota_totale:.2f}</p>
+                    </div>
+                    <div>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">PUNTATA</p>
+                        <p style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0;">{budget:.2f} €</p>
+                    </div>
+                    <div>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">VINCITA POTENZIALE</p>
+                        <p style="color: #22c55e; font-size: 1.8rem; font-weight: 800; margin: 0;">{vincita_potenziale:.2f} €</p>
+                    </div>
+                </div>
+                """,
+            unsafe_allow_html=True,
         )
+        st.markdown("</div>", unsafe_allow_html=True)
       else:
         st.warning(
-            "⚠️ Nessuna partita disponibile con i campionati o i mercati"
-            " selezionati. Riprova modificando i filtri."
+            "⚠️ Nessuna partita trovata con i campionati o mercati selezionati."
+            " Seleziona almeno un campionato e dei mercati validi."
         )
 
 with tab3:
@@ -595,5 +673,5 @@ with tab3:
   st.markdown("""
     Benvenuto nel **Centro Analisi Calcio Pro**. 
     * **Tab 1:** Analizza i campionati desiderati caricando i dati storici e le giornate correnti.
-    * **Tab 2:** Configura la tua schedina selezionando i campionati e i mercati preferiti all'interno del pannello filtri, quindi clicca su **Genera Schedina** per visualizzare il pronostico ottimizzato.
+    * **Tab 2:** Scegli i campionati tramite i comodi box interattivi, seleziona i mercati desiderati (inclusi **Under e Over di qualsiasi soglia**), imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
     """)
