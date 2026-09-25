@@ -54,27 +54,27 @@ st.markdown(
 API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
 headers = {"X-Auth-Token": API_KEY}
 
-# Elenco delle competizioni con etichette chiare e descrittive
+# Elenco delle competizioni con le bandiere emoji e i nomi chiari
 campionati = {
-    "PL": {"nome": "Premier League", "codice_nazione": "[Inghilterra]"},
-    "PD": {"nome": "La Liga", "codice_nazione": "[Spagna]"},
-    "SA": {"nome": "Serie A", "codice_nazione": "[Italia]"},
-    "BL1": {"nome": "Bundesliga", "codice_nazione": "[Germania]"},
-    "FL1": {"nome": "Ligue 1", "codice_nazione": "[Francia]"},
-    "CL": {"nome": "Champions League", "codice_nazione": "[Europa]"},
-    "EL": {"nome": "Europa League", "codice_nazione": "[Europa]"},
-    "DED": {"nome": "Eredivisie", "codice_nazione": "[Paesi Bassi]"},
-    "PPL": {"nome": "Primeira Liga", "codice_nazione": "[Portogallo]"},
-    "BSA": {"nome": "Brasileirão", "codice_nazione": "[Brasile]"},
-    "CLI": {"nome": "Copa Libertadores", "codice_nazione": "[Sud America]"},
-    "WC": {"nome": "World Cup", "codice_nazione": "[Mondo]"},
+    "PL": {"nome": "Premier League", "bandiera": "🇬🇧"},
+    "PD": {"nome": "La Liga", "bandiera": "🇪🇸"},
+    "SA": {"nome": "Serie A", "bandiera": "🇮🇹"},
+    "BL1": {"nome": "Bundesliga", "bandiera": "🇩🇪"},
+    "FL1": {"nome": "Ligue 1", "bandiera": "🇫🇷"},
+    "CL": {"nome": "Champions League", "bandiera": "🇪🇺"},
+    "EL": {"nome": "Europa League", "bandiera": "🇪🇺"},
+    "DED": {"nome": "Eredivisie", "bandiera": "🇳🇱"},
+    "PPL": {"nome": "Primeira Liga", "bandiera": "🇵🇹"},
+    "BSA": {"nome": "Brasileirão", "bandiera": "🇧🇷"},
+    "CLI": {"nome": "Copa Libertadores", "bandiera": "🌎"},
+    "WC": {"nome": "World Cup", "bandiera": "🌐"},
 }
 
 st.markdown(
     """
     <div style="text-align: center; margin-bottom: 20px;">
         <h1>⚽ ⚽ ⚽ VIGANA Centro Analisi Calcio Pro ⚽ ⚽ ⚽</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni), </p>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Piattaforma professionale con analisi multi-stagione (fino a 5 anni),</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -96,7 +96,7 @@ tab1, tab2, tab3 = st.tabs(
 with tab1:
   st.subheader("🌍 Seleziona i Campionati e Avvia l'Analisi Multi-Competizione")
 
-  # --- PANNELLO SELEZIONE CAMPIONATI TRAMITE GRIGLIA INTERATTIVA ---
+  # --- PANNELLO SELEZIONE CAMPIONATI TRAMITE GRIGLIA CON BANDIERE ---
   st.markdown(
       '<div class="dashboard-card"><div class="card-title">🏆 Seleziona Campionati'
       " da Analizzare</div>",
@@ -124,7 +124,7 @@ with tab1:
     target_col = grid_cols[i % 3]
     with target_col:
       is_checked = st.checkbox(
-          f"{info['codice_nazione']} {info['nome']}",
+          f"{info['bandiera']} {info['nome']}",
           value=code in st.session_state.leghe_selezionate_tab1,
           key=f"chk_t1_{code}",
       )
@@ -164,9 +164,7 @@ with tab1:
 
       for idx, league_code in enumerate(leghe_selezionate):
         selezionato = campionati[league_code]
-        nome_completo = (
-            f"{selezionato['codice_nazione']} {selezionato['nome']}"
-        )
+        nome_completo = f"{selezionato['bandiera']} {selezionato['nome']}"
         progress_bar.progress(
             (idx + 1) / tot_leghe,
             text=f"Analisi in corso per {nome_completo}...",
@@ -698,6 +696,6 @@ with tab3:
   st.subheader("ℹ️ Guida all'Utilizzo e Informazioni")
   st.markdown("""
     Benvenuto nel **VIGANA Centro Analisi Calcio Pro**. 
-    * **Tab 1:** Seleziona i campionati desiderati tramite la comoda griglia a schede (con indicatori nazionali chiari e puliti) e avvia l'analisi.
+    * **Tab 1:** Seleziona i campionati desiderati tramite la griglia interattiva con bandiere e avvia l'analisi.
     * **Tab 2:** Scegli i campionati e i mercati desiderati, imposta il numero di eventi e il budget, quindi clicca su **Genera Schedina Vincente**.
     """)
