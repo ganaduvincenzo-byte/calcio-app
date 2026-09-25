@@ -31,7 +31,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-API_KEY = "16ecb66eb7f7454cad0506778fa7d041"
+API_KEY = "10ecb5beb7f7454cad0500778fa7d841"
 headers = {"X-Auth-Token": API_KEY}
 
 campionati = {
@@ -45,8 +45,8 @@ campionati = {
 
 st.title("⚽ Centro Analisi Calcio Pro")
 st.markdown(
-    "Piattaforma professionale con Risultato Esatto, Over 1.5/2.5, Gol/No Gol,"
-    " Gol 1° Tempo, Rigori e marcatori."
+    "Piattaforma professionale con analisi multi-stagione, Risultato Esatto,"
+    " Over/Under, Gol/No Gol, Gol 1° Tempo, Rigori e marcatori."
 )
 st.markdown("---")
 
@@ -65,7 +65,7 @@ tab1, tab2, tab3 = st.tabs(
 with tab1:
   st.subheader("🌍 Seleziona e Analizza il Turno di Campionato")
 
-  col1, col2 = st.columns([3, 1])
+  col1, col2, col3 = st.columns([2, 1, 1])
   with col1:
     camp_options = []
     for code, c in campionati.items():
@@ -81,6 +81,19 @@ with tab1:
   selezionato = campionati[league_code]
 
   with col2:
+    # Selezione profondità storica (Anni precedenti)
+    num_stagioni = st.selectbox(
+        "Profondità storica:",
+        options=[1, 2, 3],
+        format_func=lambda x: (
+            "Solo Stagione Corrente"
+            if x == 1
+            else f"Corrente + {x-1} Anni Prec."
+        ),
+        index=1,  # Default a 2 stagioni per avere un'ottima base statistica
+    )
+
+  with col3:
     st.write("")
     st.write("")
     btn_analizza = st.button(
@@ -89,205 +102,233 @@ with tab1:
 
   if btn_analizza:
     with st.spinner(
-        f"⏳ Elaborazione dati avanzati per {selezionato['bandiera']}"
-        f" {selezionato['nome']}..."
+        f"⏳ Raccolta dati storici ({num_stagioni} stagioni) per"
+        f" {selezionato['bandiera']} {selezionato['nome']}..."
     ):
-      url_matches = (
-          f"https://api.football-data.org/v4/competitions/{league_code}/matches"
-      )
-      try:
-        response = requests.get(url_matches, headers=headers)
-        if response.status_code == 200:
-          data = response.json()
-          partite_finite = [
-              m for m in data.get("matches", []) if m.get("status") == "FINISHED"
-          ]
-          partite_future = [
-              m
-              for m in data.get("matches", [])
-              if m.get("status") in ["TIMED", "SCHEDULED"]
-          ]
+      # Raccogliamo le partite finite di N stagioni
+      # Anno di inizio standard corrente stimato al 2025 o 2026 a seconda del calendario calcistico
+      # Usiamo gli anni di partenza recenti (es. 2025, 2024, 2023)
+      anni_base = [2025, 2024, 2023, 2022]
+      partite_finite_totali = []
+      partite_future = []
 
-          if len(partite_finite) > 0:
-            media_casa = sum(
-                m["score"]["fullTime"]["home"] for m in partite_finite
-            ) / len(partite_finite)
-            media_ospiti = sum(
-                m["score"]["fullTime"]["away"] for m in partite_finite
-            ) / len(partite_finite)
-          else:
-            media_casa, media_ospiti = 1.4, 1.1
-
-          if len(partite_future) > 0:
-            prossima_giornata = partite_future[0].get("matchday", 1)
-            matchday_list = [
+      for i in range(num_stagioni):
+        anno_stagione = anni_base[i] if i < len(anni_base) else (2025 - i)
+        url_season = f"https://api.football-data.org/v4/competitions/{league_code}/matches?season={anno_stagione}"
+        try:
+          resp_season = requests.get(url_season, headers=headers)
+          if resp_season.status_code == 200:
+            d_season = resp_season.json()
+            m_fin = [
                 m
-                for m in partite_future
-                if m.get("matchday") == prossima_giornata
+                for m in d_season.get("matches", [])
+                if m.get("status") == "FINISHED"
             ]
-            if not matchday_list:
-              matchday_list = partite_future[:10]
+            partite_finite_totali.extend(m_fin)
 
-            def poisson(lmbda, k):
-              return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
-
-            report_giornata = []
-            for match in matchday_list:
-              casa = match["homeTeam"]["name"]
-              ospite = match["awayTeam"]["name"]
-
-              p_casa = [
-                  m for m in partite_finite if m["homeTeam"]["name"] == casa
+            # Prendiamo le partite future solo dalla chiamata della stagione corrente (la prima iterazione)
+            if i == 0:
+              partite_future = [
+                  m
+                  for m in d_season.get("matches", [])
+                  if m.get("status") in ["TIMED", "SCHEDULED"]
               ]
-              xg_c = (
-                  sum(m["score"]["fullTime"]["home"] for m in p_casa)
-                  / len(p_casa)
-                  if len(p_casa) > 0
-                  else media_casa
-              )
+        except Exception:
+          pass
 
-              p_ospite = [
-                  m for m in partite_finite if m["awayTeam"]["name"] == ospite
-              ]
-              xg_o = (
-                  sum(m["score"]["fullTime"]["away"] for m in p_ospite)
-                  / len(p_ospite)
-                  if len(p_ospite) > 0
-                  else media_ospiti
-              )
+      # Fallback se la chiamata stagionale fallisce o non ritorna nulla
+      if not partite_finite_totali:
+        url_matches = (
+            f"https://api.football-data.org/v4/competitions/{league_code}/matches"
+        )
+        try:
+          response = requests.get(url_matches, headers=headers)
+          if response.status_code == 200:
+            data = response.json()
+            partite_finite_totali = [
+                m
+                for m in data.get("matches", [])
+                if m.get("status") == "FINISHED"
+            ]
+            partite_future = [
+                m
+                for m in data.get("matches", [])
+                if m.get("status") in ["TIMED", "SCHEDULED"]
+            ]
+        except Exception as e:
+          st.error(f"⚠️ Errore di connessione API: {e}")
 
-              prob_1, prob_x, prob_2 = 0, 0, 0
-              prob_over15, prob_over25 = 0, 0
-              prob_gol = 0
-              max_p_risultato = -1
-              risultato_esatto = "1-1"
+      if partite_finite_totali:
+        media_casa = sum(
+            m["score"]["fullTime"]["home"] for m in partite_finite_totali
+        ) / len(partite_finite_totali)
+        media_ospiti = sum(
+            m["score"]["fullTime"]["away"] for m in partite_finite_totali
+        ) / len(partite_finite_totali)
+      else:
+        media_casa, media_ospiti = 1.4, 1.1
 
-              for g_casa in range(6):
-                for g_ospite in range(6):
-                  p = poisson(xg_c, g_casa) * poisson(xg_o, g_ospite)
+      if len(partite_future) > 0:
+        prossima_giornata = partite_future[0].get("matchday", 1)
+        matchday_list = [
+            m for m in partite_future if m.get("matchday") == prossima_giornata
+        ]
+        if not matchday_list:
+          matchday_list = partite_future[:10]
 
-                  if p > max_p_risultato:
-                    max_p_risultato = p
-                    risultato_esatto = f"{g_casa} - {g_ospite}"
+        def poisson(lmbda, k):
+          return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
 
-                  if g_casa > g_ospite:
-                    prob_1 += p
-                  elif g_casa == g_ospite:
-                    prob_x += p
-                  else:
-                    prob_2 += p
+        report_giornata = []
+        for match in matchday_list:
+          casa = match["homeTeam"]["name"]
+          ospite = match["awayTeam"]["name"]
 
-                  tot_gol = g_casa + g_ospite
-                  if tot_gol > 1.5:
-                    prob_over15 += p
-                  if tot_gol > 2.5:
-                    prob_over25 += p
+          # Statistiche storiche specifiche della squadra di casa (su tutte le stagioni caricate)
+          p_casa = [
+              m for m in partite_finite_totali if m["homeTeam"]["name"] == casa
+          ]
+          xg_c = (
+              sum(m["score"]["fullTime"]["home"] for m in p_casa)
+              / len(p_casa)
+              if len(p_casa) > 0
+              else media_casa
+          )
 
-                  if g_casa > 0 and g_ospite > 0:
-                    prob_gol += p
+          # Statistiche storiche specifiche della squadra ospite (su tutte le stagioni caricate)
+          p_ospite = [
+              m for m in partite_finite_totali if m["awayTeam"]["name"] == ospite
+          ]
+          xg_o = (
+              sum(m["score"]["fullTime"]["away"] for m in p_ospite)
+              / len(p_ospite)
+              if len(p_ospite) > 0
+              else media_ospiti
+          )
 
-              prob_under15 = 1.0 - prob_over15
-              prob_under25 = 1.0 - prob_over25
-              prob_nogol = 1.0 - prob_gol
+          prob_1, prob_x, prob_2 = 0, 0, 0
+          prob_over15, prob_over25 = 0, 0
+          prob_gol = 0
+          max_p_risultato = -1
+          risultato_esatto = "1-1"
 
-              xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
-              prob_gol_1t = 1 - (poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0))
+          for g_casa in range(6):
+            for g_ospite in range(6):
+              p = poisson(xg_c, g_casa) * poisson(xg_o, g_ospite)
 
-              stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
-              diff_forza = abs(xg_c - xg_o)
-              stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
-              prob_rigore_si = min(
-                  0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05)
-              )
+              if p > max_p_risultato:
+                max_p_risultato = p
+                risultato_esatto = f"{g_casa} - {g_ospite}"
 
-              marcatore_casa = (
-                  f"Top Attaccante ({casa})"
-                  if xg_c > 1.3
-                  else f"Esterno/Centrocampista ({casa})"
-              )
-              marcatore_ospite = (
-                  f"Top Attaccante ({ospite})"
-                  if xg_o > 1.2
-                  else f"Punta Centrale ({ospite})"
-              )
-              rischio_ammonizione = (
-                  "Alto (Mediana aggressiva)"
-                  if stima_cartellini > 4.5
-                  else "Moderato"
-              )
+              if g_casa > g_ospite:
+                prob_1 += p
+              elif g_casa == g_ospite:
+                prob_x += p
+              else:
+                prob_2 += p
 
-              # Lista di tutti i mercati calcolati per questa partita
-              mercati_partita = [
-                  {"mercato": f"1X2: Casa ({casa})", "prob": prob_1},
-                  {"mercato": f"1X2: X (Pareggio)", "prob": prob_x},
-                  {"mercato": f"1X2: Ospite ({ospite})", "prob": prob_2},
-                  {"mercato": "Over 1.5", "prob": prob_over15},
-                  {"mercato": "Under 1.5", "prob": prob_under15},
-                  {"mercato": "Over 2.5", "prob": prob_over25},
-                  {"mercato": "Under 2.5", "prob": prob_under25},
-                  {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
-                  {"mercato": "No Gol", "prob": prob_nogol},
-                  {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
-                  {"mercato": "Rigore Sì", "prob": prob_rigore_si},
-              ]
+              tot_gol = g_casa + g_ospite
+              if tot_gol > 1.5:
+                prob_over15 += p
+              if tot_gol > 2.5:
+                prob_over25 += p
 
-              # Troviamo il miglior mercato assoluto per la tabella generale
-              miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
+              if g_casa > 0 and g_ospite > 0:
+                prob_gol += p
 
-              diz_partita = {
-                  "Campionato": f"{selezionato['bandiera']} {selezionato['nome']}",
-                  "Codice": league_code,
-                  "Incontro": f"{casa} - {ospite}",
-                  "🎯 Risultato Esatto": risultato_esatto,
-                  "1 (%)": f"{prob_1 * 100:.1f}%",
-                  "X (%)": f"{prob_x * 100:.1f}%",
-                  "2 (%)": f"{prob_2 * 100:.1f}%",
-                  "Over 1.5 (%)": f"{prob_over15 * 100:.1f}%",
-                  "Over 2.5 (%)": f"{prob_over25 * 100:.1f}%",
-                  "Gol (%)": f"{prob_gol * 100:.1f}%",
-                  "No Gol (%)": f"{prob_nogol * 100:.1f}%",
-                  "Gol 1°T (%)": f"{prob_gol_1t * 100:.1f}%",
-                  "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
-                  "Corner": stimacorner,
-                  "Cartellini": stima_cartellini,
-                  "🔍 Marcatore Probabile": (
-                      f"{marcatore_casa} / {marcatore_ospite}"
-                  ),
-                  "⚠️ Rischio Cartellini": rischio_ammonizione,
-                  "_miglior_mercato": miglior_scelta["mercato"],
-                  "_miglior_prob": miglior_scelta["prob"],
-                  "_tutti_i_mercati": (
-                      mercati_partita  # Salviamo tutti i mercati per il generatore flessibile
-                  ),
-              }
-              report_giornata.append(diz_partita)
+          prob_under15 = 1.0 - prob_over15
+          prob_under25 = 1.0 - prob_over25
+          prob_nogol = 1.0 - prob_gol
 
-              esistente = next(
-                  (
-                      p
-                      for p in st.session_state.archivio_partite_globali
-                      if p["Incontro"] == diz_partita["Incontro"]
-                      and p.get("Codice") == league_code
-                  ),
-                  None,
-              )
-              if esistente:
-                st.session_state.archivio_partite_globali.remove(esistente)
-              st.session_state.archivio_partite_globali.append(diz_partita)
+          xg_c_1t, xg_o_1t = xg_c * 0.42, xg_o * 0.42
+          prob_gol_1t = 1 - (poisson(xg_c_1t, 0) * poisson(xg_o_1t, 0))
 
-            st.session_state.campionati_analizzati.add(league_code)
-            st.session_state.ultimo_report = report_giornata
-            st.success(
-                f"✅ Analisi completata per {selezionato['bandiera']}"
-                f" {selezionato['nome']} (Turno {prossima_giornata})!"
-            )
-            st.rerun()
-          else:
-            st.warning("⚠️ Nessuna partita futura trovata.")
-        else:
-          st.error(f"⚠️ Errore di accesso API ({response.status_code}).")
-      except Exception as e:
-        st.error(f"⚠️ Errore imprevisto: {e}")
+          stimacorner = round(8.5 + (xg_c + xg_o) * 0.8, 1)
+          diff_forza = abs(xg_c - xg_o)
+          stima_cartellini = max(3.8, round(5.2 - (diff_forza * 0.5), 1))
+          prob_rigore_si = min(0.55, max(0.22, 0.25 + (xg_c + xg_o) * 0.05))
+
+          marcatore_casa = (
+              f"Top Attaccante ({casa})"
+              if xg_c > 1.3
+              else f"Esterno/Centrocampista ({casa})"
+          )
+          marcatore_ospite = (
+              f"Top Attaccante ({ospite})"
+              if xg_o > 1.2
+              else f"Punta Centrale ({ospite})"
+          )
+          rischio_ammonizione = (
+              "Alto (Mediana aggressiva)"
+              if stima_cartellini > 4.5
+              else "Moderato"
+          )
+
+          mercati_partita = [
+              {"mercato": f"1X2: Casa ({casa})", "prob": prob_1},
+              {"mercato": f"1X2: X (Pareggio)", "prob": prob_x},
+              {"mercato": f"1X2: Ospite ({ospite})", "prob": prob_2},
+              {"mercato": "Over 1.5", "prob": prob_over15},
+              {"mercato": "Under 1.5", "prob": prob_under15},
+              {"mercato": "Over 2.5", "prob": prob_over25},
+              {"mercato": "Under 2.5", "prob": prob_under25},
+              {"mercato": "Gol (Entrambe segnano)", "prob": prob_gol},
+              {"mercato": "No Gol", "prob": prob_nogol},
+              {"mercato": "Gol 1°T Sì", "prob": prob_gol_1t},
+              {"mercato": "Rigore Sì", "prob": prob_rigore_si},
+          ]
+
+          miglior_scelta = max(mercati_partita, key=lambda x: x["prob"])
+
+          diz_partita = {
+              "Campionato": f"{selezionato['bandiera']} {selezionato['nome']}",
+              "Codice": league_code,
+              "Incontro": f"{casa} - {ospite}",
+              "🎯 Risultato Esatto": risultato_esatto,
+              "1 (%)": f"{prob_1 * 100:.1f}%",
+              "X (%)": f"{prob_x * 100:.1f}%",
+              "2 (%)": f"{prob_2 * 100:.1f}%",
+              "Over 1.5 (%)": f"{prob_over15 * 100:.1f}%",
+              "Over 2.5 (%)": f"{prob_over25 * 100:.1f}%",
+              "Gol (%)": f"{prob_gol * 100:.1f}%",
+              "No Gol (%)": f"{prob_nogol * 100:.1f}%",
+              "Gol 1°T (%)": f"{prob_gol_1t * 100:.1f}%",
+              "Rigore Sì (%)": f"{prob_rigore_si * 100:.1f}%",
+              "Corner": stimacorner,
+              "Cartellini": stima_cartellini,
+              "🔍 Marcatore Probabile": (
+                  f"{marcatore_casa} / {marcatore_ospite}"
+              ),
+              "⚠️ Rischio Cartellini": rischio_ammonizione,
+              "_miglior_mercato": miglior_scelta["mercato"],
+              "_miglior_prob": miglior_scelta["prob"],
+              "_tutti_i_mercati": mercati_partita,
+          }
+          report_giornata.append(diz_partita)
+
+          esistente = next(
+              (
+                  p
+                  for p in st.session_state.archivio_partite_globali
+                  if p["Incontro"] == diz_partita["Incontro"]
+                  and p.get("Codice") == league_code
+              ),
+              None,
+          )
+          if esistente:
+            st.session_state.archivio_partite_globali.remove(esistente)
+          st.session_state.archivio_partite_globali.append(diz_partita)
+
+        st.session_state.campionati_analizzati.add(league_code)
+        st.session_state.ultimo_report = report_giornata
+        st.success(
+            f"✅ Analisi multi-stagione completata per {selezionato['bandiera']}"
+            f" {selezionato['nome']} (Analizzate {len(partite_finite_totali)}"
+            f" partite storiche)!"
+        )
+        st.rerun()
+      else:
+        st.warning("⚠️ Nessuna partita futura o dato storico trovato.")
 
   if st.session_state.get("ultimo_report"):
     df_report = pd.DataFrame(st.session_state.ultimo_report)
@@ -327,7 +368,6 @@ with tab2:
           key="sel_schedina_singola",
       )
 
-  # SELEZIONE DEI MERCATI CONSENTITI
   st.markdown("#### 🎯 Scegli i mercati da includere nella schedina:")
   opzioni_mercato = st.multiselect(
       "Seleziona una o più categorie di scommessa (lascia vuoto per includere"
@@ -358,14 +398,12 @@ with tab2:
       if not pool:
         st.warning("⚠️ Nessun dato disponibile per i filtri selezionati.")
       else:
-        # Estraiamo le opzioni di scommessa migliori filtrate per ogni partita
         eventi_filtrati = []
         for partita in pool:
           for m in partita.get("_tutti_i_mercati", []):
             nome_m = m["mercato"]
             prob_m = m["prob"]
 
-            # Controlliamo se il mercato rientra nelle preferenze dell'utente
             Includi = False
             if not opzioni_mercato:
               Includi = True
@@ -400,15 +438,12 @@ with tab2:
         if not eventi_filtrati:
           st.warning(
               "⚠️ Nessun evento trovato con i filtri di mercato selezionati."
-              " Prova ad ampliare la scelta."
           )
         else:
-          # Ordiniamo per probabilità decrescente e prendiamo i primi N
           eventi_filtrati = sorted(
               eventi_filtrati, key=lambda x: x["Prob"], reverse=True
           )
 
-          # Evitiamo di mettere più scommesse sulla stessa identica partita se possibile, prendendo i migliori unici
           scelta = []
           partite_aggiunte = set()
           for ev in eventi_filtrati:
@@ -418,7 +453,6 @@ with tab2:
             if len(scelta) >= num_eventi:
               break
 
-          # Selezioniamo esattamente il numero richiesto (se ci sono abbastanza partite uniche)
           scelta = scelta[:num_eventi]
 
           prob_totale = 1.0
@@ -457,7 +491,8 @@ with tab3:
   st.subheader("ℹ️ Informazioni sull'applicazione")
   st.write(
       "Questa applicazione utilizza modelli statistici avanzati basati sulla"
-      " **Distribuzione di Poisson** per stimare il Risultato Esatto, i gol"
-      " attesi (xG), i corner, le ammonizioni, i marcatori probabili, il Gol"
-      " 1° Tempo, gli Over/Under e la stima del **Rigore Sì** per ogni match."
+      " **Distribuzione di Poisson** uniti all'analisi storica multi-stagione"
+      " per stimare con maggiore precisione il Risultato Esatto, i gol attesi"
+      " (xG), i corner, le ammonizioni, i marcatori, gli Over/Under e la stima"
+      " del **Rigore Sì**."
   )
